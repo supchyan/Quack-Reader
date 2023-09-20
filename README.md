@@ -19,4 +19,4 @@
 <br />
 дробные тома идут нафиг, такие не встречал, под них нет адаптации. да и какой гений так вообще структуру ранобэ делать будет, по сути дробные главы уже прикол. мне всё равно xd
 <br />
-![image](https://github.com/supchyan/QuackReader/assets/123704468/efe9d0ba-af8c-4230-8f95-95d8aa57bc80)
+![1](https://github.com/supchyan/QuackReader/assets/123704468/819a6ce0-038e-4d15-9ddb-a244d0e5a998)
