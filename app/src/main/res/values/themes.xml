@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="ReaderTheme" parent="android:Theme.Material.Light.NoActionBar">
+
+        <item name="android:colorPrimary">@color/_mainColor</item>
+        <item name="android:colorSecondary">@color/_sideColor</item>
+        <item name="android:statusBarColor">@color/_mainColor</item>
+        <item name="android:fontFamily">@font/roboto_slab_regular</item>
+        <item name="android:windowBackground">@drawable/background_splash</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+    </style>
+</resources>

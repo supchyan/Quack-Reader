@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:layout_centerVertical="true"
+    android:layout_centerHorizontal="true"
+    >
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/_nothingHere"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp"
+            android:paddingLeft="30dp"
+            android:text="Здесь пока ничего нет_"
+            android:textColor="@color/_sideColor"
+            android:textSize="18dp" />
+        <TextView
+            android:id="@+id/_helpInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="15dp"
+            android:paddingBottom="15dp"
+            android:paddingLeft="30dp"
+            android:paddingRight="30dp"
+            android:text="Для загрузки контента добавьте ссылку с ranobelib.com или посетите страницу проекта на GitHub для подробной информации:"
+            android:textColor="@color/_textColor"
+            android:textSize="18dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+            <LinearLayout
+                android:id="@+id/_infoBoxBtnBlock"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center">
+                <ImageView
+                    android:id="@+id/_addRanobeBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:forceDarkAllowed="true"
+                    android:src="@drawable/add_link"
+                    android:padding="15dp"
+                    />
+                <ImageView
+                    android:id="@+id/_gitLinkBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:forceDarkAllowed="true"
+                    android:src="@drawable/git_btn"
+                    android:padding="15dp"
+                    />
+                <ImageView
+                    android:id="@+id/_hideRanobeBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:forceDarkAllowed="true"
+                    android:src="@drawable/close_link"
+                    android:padding="15dp"
+                    />
+                <LinearLayout
+                    android:id="@+id/_ranobeInput"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="15dp"
+                    android:gravity="center">
+                    <EditText
+                        android:id="@+id/_urlSearch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ems="10"
+                        android:inputType="text"
+                        android:textColor="@color/_duckEyeColor"
+                        android:textColorHint="@color/_duckAbsorberColor"
+                        android:textSize="18dp"
+                        android:hint="Вставлять сюда"
+                        android:text="https://ranobelib.me/sugar-apple-fairytale"
+                        android:background="@drawable/ranobe_input_background"
+                        android:padding="15dp"
+                        />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/_darkDuck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="60dp"
+            android:src="@drawable/big_duck" />
+
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="51dp"
+    android:height="15dp"
+    android:viewportWidth="51"
+    android:viewportHeight="15">
+  <path
+      android:pathData="M8,6H48.667C49.955,6 51,7.045 51,8.333C51,10.911 48.911,13 46.333,13H8V6Z"
+      android:fillColor="@color/_duckAbsorberColor"/>
+  <path
+      android:pathData="M0,0H36C38.209,0 40,1.791 40,4V7C40,11.418 36.418,15 32,15H0V0Z"
+      android:fillColor="@color/_duckBodyColor"/>
+  <path
+      android:pathData="M31,5.5C31,4.119 32.119,3 33.5,3C34.881,3 36,4.119 36,5.5C36,6.881 34.881,8 33.5,8C32.119,8 31,6.881 31,5.5Z"
+      android:fillColor="@color/_duckEyeColor"/>
+</vector>
