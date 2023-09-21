@@ -39,16 +39,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jsoup.Connection
+import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FileWriter
+import java.math.RoundingMode
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.DecimalFormat
 
 
 class MainActivity : ComponentActivity() {
@@ -116,11 +122,12 @@ class MainActivity : ComponentActivity() {
     private var chDataFileName = "chStoredData.txt"
     private var storedChDataArr = mutableListOf<String>()
 
-    private var tempChaptersFolderName = "Temp Chapters"
-    private lateinit var ranobeURL : URL
-
-    private var cantConnect  = false
-    private var successConnect = false
+    private lateinit var inputURL : URL
+    private lateinit var nextChapterFromHTML : String
+    private var wrongInputURL  = false // send when link isn't valid
+    private var successConnect = false // send when link is valid
+    private var tooManyRequests = false // send when user clicks too often on download btn
+    private var doesLastChapterDownloaded = false // send when last chapter has been parsed and saved
 
     private var chFolderName = "Chapters"
     private var chIndex = 0
@@ -1223,7 +1230,7 @@ class MainActivity : ComponentActivity() {
         // 'git link' button activity on click
         gitLinkBtn.setOnClickListener {
             gitLinkBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.less_bouncing))
-            val url = "https://github.com/supchyan/quackreader"
+            val url = "https://github.com/supchyan/QuackReader"
 
             val i = Intent(Intent.ACTION_VIEW)
             i.data = Uri.parse(url)
@@ -1284,15 +1291,17 @@ class MainActivity : ComponentActivity() {
 
         // parse url input into temp folder
         urlSearch.setOnKeyListener(object : View.OnKeyListener {
+            @SuppressLint("RestrictedApi")
             override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
                 when (keyCode) {
                     KeyEvent.KEYCODE_ENTER -> {
+
                         Thread {
-                            //Do some Network Request
+
                             DownloadRanobe("${urlSearch.text}")
                             runOnUiThread {
                                 //Update UI
-                                if(cantConnect) {
+                                if(wrongInputURL) {
 
                                     RedImpulse(urlSearch, ranobeInput)
 
@@ -1303,11 +1312,19 @@ class MainActivity : ComponentActivity() {
 
                                     errPressCount--
 
-                                    cantConnect = false
+                                    wrongInputURL = false
                                 }
                                 if(successConnect) {
                                     GreenImpulse(urlSearch, ranobeInput)
                                     successConnect = false
+                                }
+                                if(tooManyRequests) {
+                                    coolToast("Не кликайте так часто пожалуйста хдд")
+                                    tooManyRequests = false
+                                }
+                                if(doesLastChapterDownloaded) {
+                                    coolToast("Все главы успешно загружены")
+                                    doesLastChapterDownloaded = false
                                 }
                             }
                         }.start()
@@ -1349,58 +1366,99 @@ class MainActivity : ComponentActivity() {
     //
 
     @SuppressLint("RestrictedApi")
-    private fun DownloadRanobe(url : String) {
+    private fun DownloadRanobe(url: String) {
 
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-        val tempChapters = File(appFolder, tempChaptersFolderName)
-        if (!tempChapters.exists()) {
-            tempChapters.mkdirs()
-        }
-
-        // converting string to URL
+        // checking state of availability url address
         try {
-            ranobeURL = URL(url)
-        }
-        catch (e: Exception) {
-            cantConnect = true
+            inputURL = URL(url)
+        } catch (e: Exception) {
+            wrongInputURL = true
             return
         }
         //
+        successConnect = true
 
-        var ch = 0.0
-        var tempURL: URL
-        // массив для ссылкок, потом в цикл запихнуть массив и в цикле прогонять запись в файлы
-        var job = lifecycleScope.launch {
-            for(i in 1 .. 5) {
-                for (k in 0.. 5) {
+        // this block it's start point of parser. here program tries to find "first-next" chapter
 
-                    Log.i("cock", "{$ranobeURL/v$i/c$k}")
+        nextChapterFromHTML = "$url/v1/c0"
 
-                    if(ch == 0.0) ch.toInt()
+        while (true) {
+            try {
+                Log.i("DOWNLOADING", "$nextChapterFromHTML")
 
-                    tempURL = URL("$ranobeURL/v$i/c$k")
+                val doc = Jsoup.connect(nextChapterFromHTML).userAgent("Mozilla").get()
+                val html = doc.outerHtml()
 
-                    val urlConnection = tempURL.openConnection() as HttpURLConnection
+                var getText = ""
 
-                    try {
-                        val text = urlConnection.inputStream.bufferedReader().readText()
+                if (html.contains("<div class=\"article-image\">")) {
 
-                        if(!File(tempChapters, "v$i/c$k.txt").exists()) {
-                            val readerData = File(tempChapters, "v$i/c$k.txt")
-                            val writerData = FileWriter(readerData)
-                            writerData.append(text)
-                            writerData.flush()
-                            writerData.close()
-                        }
-                        successConnect = true
-                    }
-                    catch (e : Exception) {
-                    }
-                    finally {
-                        urlConnection.disconnect()
-                    }
+                    // here means, chapter has images
+
+                    val pText = html
+                        .substringAfterLast("<div class=\"reader-container container container_center\">")
+                        .substringBefore("<div class=\"article-image\">")
+                        .replace("<p>", "")
+                        .replace("</p>", "")
+                        .replace("&nbsp;", "")
+                        .substringAfter("\n")
+                        .substringBeforeLast("\n")
+
+                    getText = pText
+                } else {
+
+                    // here means, chapter has NO images
+
+                    val pText = html
+                        .substringAfterLast("<div class=\"reader-container container container_center\">")
+                        .substringBefore("</div>")
+                        .replace("<p>", "")
+                        .replace("</p>", "")
+                        .replace("&nbsp;", "")
+                        .substringAfter("\n")
+                        .substringBeforeLast("\n")
+
+                    getText = pText
                 }
+                var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c")
+                if (volume.toDouble() < 10) {
+                    volume = "00$volume"
+                }
+                else if(volume.toDouble() < 100) {
+                    volume = "0$volume"
+                }
+
+                var chapter = nextChapterFromHTML.substringAfterLast("/c")
+                if (chapter.toDouble() < 10) {
+                    chapter = "00$chapter"
+                }
+                else if(chapter.toDouble() < 100) {
+                    chapter = "0$chapter"
+                }
+                val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+                val anotherFolder = File(appFolder, chFolderName)
+                val readerChData = File(anotherFolder, "$volume$chapter.txt")
+                val writerChData = FileWriter(readerChData)
+                writerChData.append("$getText")
+                writerChData.flush()
+                writerChData.close()
+
+                for (line in html.lines()) {
+                    if(line.contains("Последняя глава прочитана")) {
+                        doesLastChapterDownloaded = true
+                        return
+                    }
+                    if(line.contains("Следующая глава"))
+                        nextChapterFromHTML = line
+                }
+                nextChapterFromHTML = nextChapterFromHTML
+                    .substringAfter("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
+                    .substringBefore("\" tabindex=\"-1\"> <span>Следующая глава</span>")
+            } catch (e: Exception) {
+                tooManyRequests = true
+                return
             }
         }
+        //
     }
 }

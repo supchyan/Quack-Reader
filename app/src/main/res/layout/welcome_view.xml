@@ -83,7 +83,7 @@
                         android:textColorHint="@color/_duckAbsorberColor"
                         android:textSize="18dp"
                         android:hint="Вставлять сюда"
-                        android:text="https://ranobelib.me/sugar-apple-fairytale"
+                        android:text="https://ranobelib.me/arifureta-from-commonplace-to-worlds-strongest"
                         android:background="@drawable/ranobe_input_background"
                         android:padding="15dp"
                         />
