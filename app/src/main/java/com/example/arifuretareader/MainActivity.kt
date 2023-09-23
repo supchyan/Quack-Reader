@@ -1,5 +1,6 @@
 package com.example.arifuretareader
 
+import android.Manifest
 import android.Manifest.permission.INTERNET
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -7,6 +8,7 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -26,6 +28,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -36,25 +39,21 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.PackageManagerCompat.LOG_TAG
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.jsoup.Connection
 import org.jsoup.Jsoup
 import java.io.File
-import java.io.FileOutputStream
 import java.io.FileWriter
-import java.math.RoundingMode
-import java.net.HttpURLConnection
 import java.net.URL
-import java.text.DecimalFormat
 
 
 class MainActivity : ComponentActivity() {
@@ -78,7 +77,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var chapterUIscrollBlock: LinearLayout
 
     private lateinit var ranobeName: TextView
-    private var ranobeTitle = "Арифурэта: С простейшей профессией к Сильнейшему в мире"
+    private var ranobeTitle = ""
 
     private val chScrollContainerArr = mutableListOf<TextView>()
     private val chUIscrollContainerArr = mutableListOf<TextView>()
@@ -114,7 +113,7 @@ class MainActivity : ComponentActivity() {
     private var delPressCount = 5 // before delete chapters from app, you pressing btn 5 times
     private var errPressCount = 5 // before tell advice to use, he tries 5 time by himself
 
-    private var appFolderName = "Quack Re. Data"
+    private var appFolderName = "Quack Re."
 
     private var bMdataFileName = "storedData.txt"
     private var storedBmDataArr = mutableListOf<String>()
@@ -122,12 +121,17 @@ class MainActivity : ComponentActivity() {
     private var chDataFileName = "chStoredData.txt"
     private var storedChDataArr = mutableListOf<String>()
 
+    private var ranobeTitleFileName = "ranobeTitle.txt"
+
     private lateinit var inputURL : URL
     private lateinit var nextChapterFromHTML : String
     private var wrongInputURL  = false // send when link isn't valid
     private var successConnect = false // send when link is valid
-    private var tooManyRequests = false // send when user clicks too often on download btn
+    private var parsingError = false // send when somehow can't download chapters
     private var doesLastChapterDownloaded = false // send when last chapter has been parsed and saved
+    private var isDownloading = false // send when can't press enter btn to download chapters from ranobelib
+    private var chaptersAmount = 0
+    private var needFilter = true
 
     private var chFolderName = "Chapters"
     private var chIndex = 0
@@ -136,6 +140,12 @@ class MainActivity : ComponentActivity() {
 
     private val PERMISSION_CODE = 100
 
+    companion object {
+        const val NOTIFICATION_ID = 101
+        const val CHANNEL_ID = "channelID"
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("RestrictedApi", "SetTextI18n", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -166,6 +176,8 @@ class MainActivity : ComponentActivity() {
         toBmBtn = findViewById(R.id._toBookmark)
         swapThemeBtn = findViewById(R.id._swapTheme)
         //
+
+        CreateNotificationChannel()
 
         // generates 'condition container' to make sure that app can work properly when executing code below
         fun AllowPermissionBlock() {
@@ -222,395 +234,6 @@ class MainActivity : ComponentActivity() {
 
         // connect this to some data file in future and to theme changer
         swapThemeBtn.setImageDrawable(getDrawable(R.drawable.dark_theme))
-        //
-
-        // Block with chapter's content
-        @SuppressLint("ClickableViewAccessibility")
-        fun ReadingBlock(scope: CoroutineScope) {
-
-            centeredBlock.visibility = View.GONE
-
-            LoadBookMarkData()
-            LoadChapterData()
-
-            // novel name
-            ranobeName.text = ranobeTitle
-            //
-
-            // duck bookmark
-            val duckView = layoutInflater.inflate(R.layout.duck_toast, null)
-            //
-
-            paragraphCount = chText.lastIndex
-
-            for (i in 0..paragraphCount) {
-                paragraphArr += TextView(this)
-                duckLayout += LinearLayout(this)
-                duckArr += ImageView(this)
-            }
-            paragraphBuffer = scope.launch {
-                for (paragraph in paragraphArr) {
-
-                    if (paragraphArr.indexOf(paragraph) < paragraphArr.size) {
-
-                        var k = paragraphArr.indexOf(paragraph)
-
-                        // paragraph
-                        paragraph.text = chText[k]
-                        paragraph.setTextColor(getColor(R.color._textColor))
-                        paragraph.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-                        if (paragraphArr.indexOf(paragraph) != paragraphArr.lastIndex)
-                            paragraph.setPadding(dpToFloat(30).toInt(), 0, dpToFloat(30).toInt(), 0)
-                        else
-                            paragraph.setPadding(
-                                dpToFloat(30).toInt(),
-                                0,
-                                dpToFloat(30).toInt(),
-                                dpToFloat(60).toInt()
-                            )
-
-                        scrollContainer.addView(paragraph)
-
-                        var animation = AnimationUtils.loadAnimation(
-                            applicationContext,
-                            R.anim.simple_appearing
-                        )
-                        paragraph.animation = animation
-                        //
-
-                        var duckLayoutId = duckLayout[paragraphArr.indexOf(paragraph)]
-                        duckLayoutId.layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        duckLayoutId.gravity = Gravity.LEFT
-
-                        // duck bookmark
-                        var duckId = duckArr[paragraphArr.indexOf(paragraph)]
-
-                        duckId.setImageDrawable(getDrawable(R.drawable.duckbookmark))
-                        duckId.layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        duckId.scaleX = 1.3f
-                        duckId.scaleY = 1.3f
-                        duckId.setPadding(0, dpToFloat(10).toInt(), 0, dpToFloat(10).toInt())
-                        duckId.visibility = View.INVISIBLE
-                        duckId.foregroundGravity = Gravity.LEFT
-                        //
-
-                        // append to duckLayout duck image view and then append it in scroll container
-                        duckLayoutId.addView(duckId)
-                        scrollContainer.addView(duckLayoutId)
-                        //
-
-                        paragraph.setOnClickListener {
-
-                            if (isChUIshown) {
-                                return@setOnClickListener
-                            }
-
-                            if (paragraph.text.toString().contains("*")) {
-
-                                bookMarked = false
-
-                                if (!bookMarked) {
-                                    for (i in 0..paragraphArr.lastIndex) {
-                                        if (duckArr[i].visibility == View.VISIBLE) {
-                                            duckArr[i].animation = AnimationUtils.loadAnimation(
-                                                applicationContext,
-                                                R.anim.duck_out
-                                            )
-                                            Handler().postDelayed({
-                                                duckArr[i].visibility = View.INVISIBLE
-                                            }, 300)
-                                        }
-                                        duckArr[i].visibility = View.INVISIBLE
-                                    }
-                                    TextColorNormalize()
-                                }
-
-                                paragraphIndex = paragraphArr.indexOf(paragraph) - 1
-                                bookMarked = paragraphIndex > 0
-                                scrollPos = scrollBar.scrollY
-
-                                SaveData()
-
-                                scrollBar.smoothScrollTo(0, scrollContainer.height)
-
-                                for (i in 0..paragraphArr.lastIndex) {
-                                    paragraphArr[i].setTextColor(getColor(R.color._textColor))
-                                }
-                                for (i in 0..paragraphIndex) {
-                                    if (paragraphIndex > 0)
-                                        paragraphArr[i].setTextColor(getColor(R.color._sideColor))
-                                }
-                            }
-                        }
-
-                        // 'duck bookmark' button activity on click
-                        duckLayoutId.setOnClickListener {
-
-                            if (isChUIshown) {
-                                return@setOnClickListener
-                            }
-
-                            bookMarked = !bookMarked
-                            paragraphIndex = paragraphArr.indexOf(paragraph)
-                            scrollPos = scrollBar.scrollY
-
-                            SaveData()
-
-                            if (!bookMarked) {
-                                for (i in 0..paragraphArr.lastIndex) {
-                                    if (duckArr[i].visibility == View.VISIBLE) {
-                                        duckArr[i].animation = AnimationUtils.loadAnimation(
-                                            applicationContext,
-                                            R.anim.duck_out
-                                        )
-                                        Handler().postDelayed({
-                                            duckArr[i].visibility = View.INVISIBLE
-                                        }, 300)
-                                    }
-                                    duckArr[i].visibility = View.INVISIBLE
-                                }
-                                TextColorNormalize()
-                            } else {
-                                for (i in 0..paragraphArr.lastIndex) {
-                                    if (i == paragraphIndex) duckArr[i].visibility = View.VISIBLE
-                                    else duckArr[i].visibility = View.INVISIBLE
-                                }
-                                duckId.animation =
-                                    AnimationUtils.loadAnimation(applicationContext, R.anim.duck_in)
-                                for (i in 0..paragraphIndex) {
-                                    paragraphArr[i].setTextColor(getColor(R.color._sideColor))
-                                }
-                            }
-                        }
-                        if (!bookMarked) {
-                            for (i in 0..paragraphArr.lastIndex) {
-                                duckArr[i].visibility = View.INVISIBLE
-                            }
-                            TextColorNormalize()
-                        } else {
-                            duckArr[paragraphIndex].visibility = View.VISIBLE
-                            for (i in 0..paragraphIndex) {
-                                paragraphArr[i].setTextColor(getColor(R.color._sideColor))
-                            }
-                        }
-                    }
-                    delay(1)
-                }
-            }
-        }
-        //
-
-        // Block with chapters selections
-        @SuppressLint("ResourceAsColor")
-        fun ChaptersSelectBlock(scope: CoroutineScope) {
-
-            var tomeOld = 0.0
-            var tomeOldUI = 0.0
-
-            for (i in 0..chNumArr.lastIndex) {
-                chScrollContainerArr += TextView(this)
-                chUIscrollContainerArr += TextView(this)
-            }
-            chJob = scope.launch {
-                for (v in chScrollContainerArr) {
-
-                    // name of the chapter in chapter's select mode
-                    var context = chNumArr[chScrollContainerArr.indexOf(v)].replace(".txt", "")
-                    var tomeStr = context.substring(0, 3)
-                    var chapterStr = context.substring(3, context.length)
-
-                    var tome = ""
-                    var chapter = ""
-
-                    var tempTome = tomeStr.toDouble().toInt().toDouble()
-                    var tempChapter = chapterStr.toDouble().toInt().toDouble()
-
-                    // filter system to make 000102304230 looks like Tome 3, Chapter 1 *stone face with sparkles*
-                    if (tomeStr.toDouble() != tempTome) {
-                        tome = tomeStr.toDouble().toString()
-                    } else {
-                        tome = tomeStr.toDouble().toInt().toString()
-                    }
-                    if (chapterStr.toDouble() != tempChapter) {
-                        chapter = chapterStr.toDouble().toString()
-                    } else {
-                        chapter = chapterStr.toDouble().toInt().toString()
-                    }
-
-                    v.text = "Том $tome, Глава $chapter"
-
-                    if (chScrollContainerArr.indexOf(v) == chIndex) {
-                        v.setTextColor(getColor(R.color._sideColor))
-                    } else {
-                        v.setTextColor(getColor(R.color._textColor))
-                    }
-
-                    v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-
-                    if (tome.toDouble() == tomeOld) {
-                        var separator = layoutInflater.inflate(R.layout.separator_line, null)
-                        if (chScrollContainerArr.indexOf(v) != 0)
-                            chapterScrollContainer.addView(separator)
-                        chapterScrollContainer.addView(v)
-                    } else {
-                        tomeOld = tome.toDouble()
-
-                        var separator = layoutInflater.inflate(R.layout.separator_tri, null)
-                        if (chScrollContainerArr.indexOf(v) != 0)
-                            chapterScrollContainer.addView(separator)
-                        chapterScrollContainer.addView(v)
-                    }
-
-                    v.setOnClickListener {
-
-                        paragraphBuffer.cancel()
-                        chJob.cancel()
-                        chUIjob.cancel()
-
-                        for (i in 0..chScrollContainerArr.lastIndex) {
-                            chScrollContainerArr[i].setTextColor(getColor(R.color._textColor))
-                        }
-                        for (i in 0..chUIscrollContainerArr.lastIndex) {
-                            chUIscrollContainerArr[i].setTextColor(getColor(R.color._textColor))
-                        }
-
-                        v.setTextColor(getColor(R.color._sideColor))
-                        chUIscrollContainerArr[chScrollContainerArr.indexOf(v)].setTextColor(
-                            getColor(R.color._sideColor)
-                        )
-
-                        chScrollPos = v.left
-
-                        chIndex = chScrollContainerArr.indexOf(v)
-
-                        scrollBar.scrollTo(0, 0)
-
-                        SaveData()
-                        ClearReadingBlock()
-                        EraseBookMarkData()
-
-                        ReadingBlock(lifecycleScope)
-                    }
-                    delay(1)
-                }
-            }
-            chUIjob = scope.launch {
-                for (vUI in chUIscrollContainerArr) {
-                    // name of the chapter in chapter's select mode
-                    var context = chNumArr[chUIscrollContainerArr.indexOf(vUI)].replace(".txt", "")
-                    var tomeStr = context.substring(0, 3)
-                    var chapterStr = context.substring(3, context.length)
-
-                    var tome = ""
-                    var chapter = ""
-
-                    var tempTome = tomeStr.toDouble().toInt().toDouble()
-                    var tempChapter = chapterStr.toDouble().toInt().toDouble()
-
-                    // filter system to make 000102304230 looks like Tome 3, Chapter 1 *stone face with sparkles*
-                    if (tomeStr.toDouble() != tempTome) {
-                        tome = tomeStr.toDouble().toString()
-                    } else {
-                        tome = tomeStr.toDouble().toInt().toString()
-                    }
-                    if (chapterStr.toDouble() != tempChapter) {
-                        chapter = chapterStr.toDouble().toString()
-                    } else {
-                        chapter = chapterStr.toDouble().toInt().toString()
-                    }
-
-                    vUI.text = "Том $tome, Глава $chapter"
-
-                    vUI.gravity = Gravity.CENTER
-
-                    vUI.setPadding(0, dpToFloat(25).toInt(), 0, dpToFloat(25).toInt())
-
-                    if (chUIscrollContainerArr.indexOf(vUI) == chIndex) {
-                        vUI.setTextColor(getColor(R.color._sideColor))
-                    } else {
-                        vUI.setTextColor(getColor(R.color._textColor))
-                    }
-
-                    vUI.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-
-                    var separator = layoutInflater.inflate(R.layout.separator_tome, null)
-                    var tomeText = separator.findViewById<TextView>(R.id._tome_chUI_text)
-
-                    tomeText.textAlignment = View.TEXT_ALIGNMENT_CENTER
-
-                    tomeText.setPadding(0, dpToFloat(15).toInt(), 0, dpToFloat(15).toInt())
-
-                    if (tome.toDouble() != tomeOldUI) {
-                        tomeOldUI = tome.toDouble()
-                        tomeText.text = "Том $tome"
-                        chapterUIscrollContainer.addView(separator)
-                    }
-                    chapterUIscrollContainer.addView(vUI)
-
-                    vUI.setOnClickListener {
-
-                        paragraphBuffer.cancel()
-                        chJob.cancel()
-                        chUIjob.cancel()
-
-                        for (i in 0..chUIscrollContainerArr.lastIndex) {
-                            chUIscrollContainerArr[i].setTextColor(getColor(R.color._textColor))
-                        }
-                        for (i in 0..chScrollContainerArr.lastIndex) {
-                            chScrollContainerArr[i].setTextColor(getColor(R.color._textColor))
-                        }
-
-                        vUI.setTextColor(getColor(R.color._sideColor))
-                        chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].setTextColor(
-                            getColor(R.color._sideColor)
-                        )
-
-                        chScrollPos = chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].left
-
-                        chIndex = chUIscrollContainerArr.indexOf(vUI)
-
-                        scrollBar.scrollTo(0, 0)
-                        chapterScrollBar.scrollTo(chScrollPos, 0)
-
-                        SaveData()
-                        ClearReadingBlock()
-                        EraseBookMarkData()
-
-                        isChUIshown = !isChUIshown
-
-                        openChUIbtn.startAnimation(
-                            AnimationUtils.loadAnimation(
-                                applicationContext,
-                                R.anim.rotate_from_180_fa
-                            )
-                        )
-
-                        delRanobeBtn.visibility = View.GONE
-                        duckCustomizerBtn.visibility = View.VISIBLE
-
-                        chapterScrollBar.visibility = View.VISIBLE
-                        chapterScrollBar.animate().alpha(1f).setDuration(250)
-                            .setInterpolator(AccelerateDecelerateInterpolator()).start()
-
-                        scrollContainer.visibility = View.VISIBLE
-                        scrollContainer.animate().alpha(1f).setDuration(250)
-                            .setInterpolator(AccelerateDecelerateInterpolator()).start()
-
-                        chapterShownUI.animate().translationY(dpToFloat(500)).setDuration(250)
-                            .setInterpolator(AccelerateDecelerateInterpolator()).start()
-
-                        ReadingBlock(lifecycleScope)
-                    }
-                    delay(1)
-                }
-            }
-        }
         //
 
         // 'to current chapter in menu' button activity on click
@@ -677,6 +300,7 @@ class MainActivity : ComponentActivity() {
             if (delPressCount != 0) {
                 coolToast("Нажмите ещё $delPressCount раз, чтобы удалить все главы")
             } else {
+
                 delPressCount = 5
                 paragraphBuffer.cancel()
                 chJob.cancel()
@@ -684,11 +308,9 @@ class MainActivity : ComponentActivity() {
 
                 WelcomeViewBlock()
 
-                var appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-                val chFolder = File(appFolder, chFolderName)
-                for (chapters in chFolder.listFiles()) {
-                    chapters.delete()
-                }
+                DeleteChapters()
+
+                ranobeTitle = ""
 
                 coolToast("Удаление успешно")
             }
@@ -754,8 +376,6 @@ class MainActivity : ComponentActivity() {
             chapterUIscrollContainer.removeAllViews()
             ChaptersSelectBlock(lifecycleScope)
 
-            chapterScrollBar.scrollTo(chScrollPos, 0)
-
             SaveData()
 
             ClearReadingBlock()
@@ -798,8 +418,6 @@ class MainActivity : ComponentActivity() {
             chUIscrollContainerArr.clear()
             chapterUIscrollContainer.removeAllViews()
             ChaptersSelectBlock(lifecycleScope)
-
-            chapterScrollBar.scrollTo(chScrollPos, 0)
 
             SaveData()
 
@@ -895,16 +513,18 @@ class MainActivity : ComponentActivity() {
     //
 
     // checks permissions on different apis
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun CheckPermission(): Boolean {
         return if (SDK_INT >= Build.VERSION_CODES.R) {
             //Android is 11(R) or above
             Environment.isExternalStorageManager()
         } else {
             //Android is below 11(R)
+            val notificatioins = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             val internet = ContextCompat.checkSelfPermission(this, INTERNET)
             val write = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE)
             val read = ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE)
-            internet == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED
+            notificatioins == PackageManager.PERMISSION_GRANTED && internet == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED
         }
     }
     //
@@ -986,6 +606,16 @@ class MainActivity : ComponentActivity() {
             writerChData.close()
         }
         //
+
+        // creates title data if not exists
+        if (!File(appFolder, ranobeTitleFileName).exists()) {
+            val readerChData = File(appFolder, ranobeTitleFileName)
+            val writerChData = FileWriter(readerChData)
+            writerChData.append("No data")
+            writerChData.flush()
+            writerChData.close()
+        }
+        //
     }
 
     // saves (writes) data in files
@@ -1008,6 +638,12 @@ class MainActivity : ComponentActivity() {
         writerChData.flush()
         writerChData.close()
         //
+
+        val readerTiData = File(appFolder, ranobeTitleFileName)
+        val writerTiData = FileWriter(readerTiData)
+        writerTiData.append("$ranobeTitle")
+        writerTiData.flush()
+        writerTiData.close()
     }
     //
 
@@ -1045,6 +681,13 @@ class MainActivity : ComponentActivity() {
     private fun LoadChapterData() {
 
         val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        // loads title data to variable
+        val titleFile = File("$appFolder/$ranobeTitleFileName")
+        for (line in titleFile.readLines()) {
+            ranobeTitle = line
+        }
+        //
 
         // saves file data into storedChArr[]
         val dataChFile = File("$appFolder/$chDataFileName")
@@ -1160,6 +803,397 @@ class MainActivity : ComponentActivity() {
     }
     //
 
+    // Block with chapter's content
+    @SuppressLint("ClickableViewAccessibility")
+    private fun ReadingBlock(scope: CoroutineScope) {
+
+        centeredBlock.visibility = View.GONE
+
+        LoadBookMarkData()
+        LoadChapterData()
+
+        // novel name
+        ranobeName.text = ranobeTitle
+        //
+
+        // duck bookmark
+        val duckView = layoutInflater.inflate(R.layout.duck_toast, null)
+        //
+
+        paragraphCount = chText.lastIndex
+
+        for (i in 0..paragraphCount) {
+            paragraphArr += TextView(this)
+            duckLayout += LinearLayout(this)
+            duckArr += ImageView(this)
+        }
+        paragraphBuffer = scope.launch {
+            for (paragraph in paragraphArr) {
+
+                // back position of scroll bar to bottom horizontal chapter's bar
+                chapterScrollBar.scrollTo(chScrollPos, 0) // this is here, because of multiple updates...hahahn't
+                //
+
+                if (paragraphArr.indexOf(paragraph) < paragraphArr.size) {
+
+                    var k = paragraphArr.indexOf(paragraph)
+
+                    // paragraph
+                    paragraph.text = chText[k]
+                    paragraph.setTextColor(getColor(R.color._textColor))
+                    paragraph.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                    if (paragraphArr.indexOf(paragraph) != paragraphArr.lastIndex)
+                        paragraph.setPadding(dpToFloat(30).toInt(), 0, dpToFloat(30).toInt(), 0)
+                    else
+                        paragraph.setPadding(
+                            dpToFloat(30).toInt(),
+                            0,
+                            dpToFloat(30).toInt(),
+                            dpToFloat(60).toInt()
+                        )
+
+                    scrollContainer.addView(paragraph)
+
+                    var animation = AnimationUtils.loadAnimation(
+                        applicationContext,
+                        R.anim.simple_appearing
+                    )
+                    paragraph.animation = animation
+                    //
+
+                    var duckLayoutId = duckLayout[paragraphArr.indexOf(paragraph)]
+                    duckLayoutId.layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    duckLayoutId.gravity = Gravity.LEFT
+
+                    // duck bookmark
+                    var duckId = duckArr[paragraphArr.indexOf(paragraph)]
+
+                    duckId.setImageDrawable(getDrawable(R.drawable.duckbookmark))
+                    duckId.layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    duckId.scaleX = 1.3f
+                    duckId.scaleY = 1.3f
+                    duckId.setPadding(0, dpToFloat(10).toInt(), 0, dpToFloat(10).toInt())
+                    duckId.visibility = View.INVISIBLE
+                    duckId.foregroundGravity = Gravity.LEFT
+                    //
+
+                    // append to duckLayout duck image view and then append it in scroll container
+                    duckLayoutId.addView(duckId)
+                    scrollContainer.addView(duckLayoutId)
+                    //
+
+                    paragraph.setOnClickListener {
+
+                        if (isChUIshown) {
+                            return@setOnClickListener
+                        }
+
+                        if (paragraph.text.toString().contains("*")) {
+
+                            bookMarked = false
+
+                            if (!bookMarked) {
+                                for (i in 0..paragraphArr.lastIndex) {
+                                    if (duckArr[i].visibility == View.VISIBLE) {
+                                        duckArr[i].animation = AnimationUtils.loadAnimation(
+                                            applicationContext,
+                                            R.anim.duck_out
+                                        )
+                                        Handler().postDelayed({
+                                            duckArr[i].visibility = View.INVISIBLE
+                                        }, 300)
+                                    }
+                                    duckArr[i].visibility = View.INVISIBLE
+                                }
+                                TextColorNormalize()
+                            }
+
+                            paragraphIndex = paragraphArr.indexOf(paragraph) - 1
+                            bookMarked = paragraphIndex > 0
+                            scrollPos = scrollBar.scrollY
+
+                            SaveData()
+
+                            scrollBar.smoothScrollTo(0, scrollContainer.height)
+
+                            for (i in 0..paragraphArr.lastIndex) {
+                                paragraphArr[i].setTextColor(getColor(R.color._textColor))
+                            }
+                            for (i in 0..paragraphIndex) {
+                                if (paragraphIndex > 0)
+                                    paragraphArr[i].setTextColor(getColor(R.color._sideColor))
+                            }
+                        }
+                    }
+
+                    // 'duck bookmark' button activity on click
+                    duckLayoutId.setOnClickListener {
+
+                        if (isChUIshown) {
+                            return@setOnClickListener
+                        }
+
+                        bookMarked = !bookMarked
+                        paragraphIndex = paragraphArr.indexOf(paragraph)
+                        scrollPos = scrollBar.scrollY
+
+                        SaveData()
+
+                        if (!bookMarked) {
+                            for (i in 0..paragraphArr.lastIndex) {
+                                if (duckArr[i].visibility == View.VISIBLE) {
+                                    duckArr[i].animation = AnimationUtils.loadAnimation(
+                                        applicationContext,
+                                        R.anim.duck_out
+                                    )
+                                    Handler().postDelayed({
+                                        duckArr[i].visibility = View.INVISIBLE
+                                    }, 300)
+                                }
+                                duckArr[i].visibility = View.INVISIBLE
+                            }
+                            TextColorNormalize()
+                        } else {
+                            for (i in 0..paragraphArr.lastIndex) {
+                                if (i == paragraphIndex) duckArr[i].visibility = View.VISIBLE
+                                else duckArr[i].visibility = View.INVISIBLE
+                            }
+                            duckId.animation =
+                                AnimationUtils.loadAnimation(applicationContext, R.anim.duck_in)
+                            for (i in 0..paragraphIndex) {
+                                paragraphArr[i].setTextColor(getColor(R.color._sideColor))
+                            }
+                        }
+                    }
+                    if (!bookMarked) {
+                        for (i in 0..paragraphArr.lastIndex) {
+                            duckArr[i].visibility = View.INVISIBLE
+                        }
+                        TextColorNormalize()
+                    } else {
+                        duckArr[paragraphIndex].visibility = View.VISIBLE
+                        for (i in 0..paragraphIndex) {
+                            paragraphArr[i].setTextColor(getColor(R.color._sideColor))
+                        }
+                    }
+                }
+                delay(1)
+            }
+        }
+    }
+    //
+
+    // Block with chapters selections
+    @SuppressLint("ResourceAsColor")
+    private fun ChaptersSelectBlock(scope: CoroutineScope) {
+
+        var tomeOld = 0.0
+        var tomeOldUI = 0.0
+
+        for (i in 0..chNumArr.lastIndex) {
+            chScrollContainerArr += TextView(this)
+            chUIscrollContainerArr += TextView(this)
+        }
+        chJob = scope.launch {
+            for (v in chScrollContainerArr) {
+
+                // name of the chapter in chapter's select mode
+                var context = chNumArr[chScrollContainerArr.indexOf(v)].replace(".txt", "")
+                var tomeStr = context.substring(0, 3)
+                var chapterStr = context.substring(3, context.length)
+
+                var tome = ""
+                var chapter = ""
+
+                var tempTome = tomeStr.toDouble().toInt().toDouble()
+                var tempChapter = chapterStr.toDouble().toInt().toDouble()
+
+                // filter system to make 000102304230 looks like Tome 3, Chapter 1 *stone face with sparkles*
+                if (tomeStr.toDouble() != tempTome) {
+                    tome = tomeStr.toDouble().toString()
+                } else {
+                    tome = tomeStr.toDouble().toInt().toString()
+                }
+                if (chapterStr.toDouble() != tempChapter) {
+                    chapter = chapterStr.toDouble().toString()
+                } else {
+                    chapter = chapterStr.toDouble().toInt().toString()
+                }
+
+                v.text = "Том $tome, Глава $chapter"
+
+                if (chScrollContainerArr.indexOf(v) == chIndex) {
+                    v.setTextColor(getColor(R.color._sideColor))
+                } else {
+                    v.setTextColor(getColor(R.color._textColor))
+                }
+
+                v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+
+                if (tome.toDouble() == tomeOld) {
+                    var separator = layoutInflater.inflate(R.layout.separator_line, null)
+                    if (chScrollContainerArr.indexOf(v) != 0)
+                        chapterScrollContainer.addView(separator)
+                    chapterScrollContainer.addView(v)
+                } else {
+                    tomeOld = tome.toDouble()
+
+                    var separator = layoutInflater.inflate(R.layout.separator_tri, null)
+                    if (chScrollContainerArr.indexOf(v) != 0)
+                        chapterScrollContainer.addView(separator)
+                    chapterScrollContainer.addView(v)
+                }
+
+                v.setOnClickListener {
+
+                    paragraphBuffer.cancel()
+                    chJob.cancel()
+                    chUIjob.cancel()
+
+                    for (i in 0..chScrollContainerArr.lastIndex) {
+                        chScrollContainerArr[i].setTextColor(getColor(R.color._textColor))
+                    }
+                    for (i in 0..chUIscrollContainerArr.lastIndex) {
+                        chUIscrollContainerArr[i].setTextColor(getColor(R.color._textColor))
+                    }
+
+                    v.setTextColor(getColor(R.color._sideColor))
+                    chUIscrollContainerArr[chScrollContainerArr.indexOf(v)].setTextColor(
+                        getColor(R.color._sideColor)
+                    )
+
+                    chScrollPos = v.left
+
+                    chIndex = chScrollContainerArr.indexOf(v)
+
+                    scrollBar.scrollTo(0, 0)
+
+                    SaveData()
+                    ClearReadingBlock()
+                    EraseBookMarkData()
+
+                    ReadingBlock(lifecycleScope)
+                }
+            }
+        }
+        chUIjob = scope.launch {
+            for (vUI in chUIscrollContainerArr) {
+                // name of the chapter in chapter's select mode
+                var context = chNumArr[chUIscrollContainerArr.indexOf(vUI)].replace(".txt", "")
+                var tomeStr = context.substring(0, 3)
+                var chapterStr = context.substring(3, context.length)
+
+                var tome = ""
+                var chapter = ""
+
+                var tempTome = tomeStr.toDouble().toInt().toDouble()
+                var tempChapter = chapterStr.toDouble().toInt().toDouble()
+
+                // filter system to make 000102304230 looks like Tome 3, Chapter 1 *stone face with sparkles*
+                if (tomeStr.toDouble() != tempTome) {
+                    tome = tomeStr.toDouble().toString()
+                } else {
+                    tome = tomeStr.toDouble().toInt().toString()
+                }
+                if (chapterStr.toDouble() != tempChapter) {
+                    chapter = chapterStr.toDouble().toString()
+                } else {
+                    chapter = chapterStr.toDouble().toInt().toString()
+                }
+
+                vUI.text = "Том $tome, Глава $chapter"
+
+                vUI.gravity = Gravity.CENTER
+
+                vUI.setPadding(0, dpToFloat(25).toInt(), 0, dpToFloat(25).toInt())
+
+                if (chUIscrollContainerArr.indexOf(vUI) == chIndex) {
+                    vUI.setTextColor(getColor(R.color._sideColor))
+                } else {
+                    vUI.setTextColor(getColor(R.color._textColor))
+                }
+
+                vUI.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+
+                var separator = layoutInflater.inflate(R.layout.separator_tome, null)
+                var tomeText = separator.findViewById<TextView>(R.id._tome_chUI_text)
+
+                tomeText.textAlignment = View.TEXT_ALIGNMENT_CENTER
+
+                tomeText.setPadding(0, dpToFloat(15).toInt(), 0, dpToFloat(15).toInt())
+
+                if (tome.toDouble() != tomeOldUI) {
+                    tomeOldUI = tome.toDouble()
+                    tomeText.text = "Том $tome"
+                    chapterUIscrollContainer.addView(separator)
+                }
+                chapterUIscrollContainer.addView(vUI)
+
+                vUI.setOnClickListener {
+
+                    paragraphBuffer.cancel()
+                    chJob.cancel()
+                    chUIjob.cancel()
+
+                    for (i in 0..chUIscrollContainerArr.lastIndex) {
+                        chUIscrollContainerArr[i].setTextColor(getColor(R.color._textColor))
+                    }
+                    for (i in 0..chScrollContainerArr.lastIndex) {
+                        chScrollContainerArr[i].setTextColor(getColor(R.color._textColor))
+                    }
+
+                    vUI.setTextColor(getColor(R.color._sideColor))
+                    chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].setTextColor(
+                        getColor(R.color._sideColor)
+                    )
+
+                    chScrollPos = chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].left
+
+                    chIndex = chUIscrollContainerArr.indexOf(vUI)
+
+                    scrollBar.scrollTo(0, 0)
+                    chapterScrollBar.scrollTo(chScrollPos, 0)
+
+                    SaveData()
+                    ClearReadingBlock()
+                    EraseBookMarkData()
+
+                    isChUIshown = !isChUIshown
+
+                    openChUIbtn.startAnimation(
+                        AnimationUtils.loadAnimation(
+                            applicationContext,
+                            R.anim.rotate_from_180_fa
+                        )
+                    )
+
+                    delRanobeBtn.visibility = View.GONE
+                    duckCustomizerBtn.visibility = View.VISIBLE
+
+                    chapterScrollBar.visibility = View.VISIBLE
+                    chapterScrollBar.animate().alpha(1f).setDuration(250)
+                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
+
+                    scrollContainer.visibility = View.VISIBLE
+                    scrollContainer.animate().alpha(1f).setDuration(250)
+                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
+
+                    chapterShownUI.animate().translationY(dpToFloat(500)).setDuration(250)
+                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
+
+                    ReadingBlock(lifecycleScope)
+                }
+            }
+        }
+    }
+    //
+
     private fun WelcomeViewBlock() {
 
         EraseChData()
@@ -1183,7 +1217,7 @@ class MainActivity : ComponentActivity() {
         val gitLinkBtn = welcomeView.findViewById<ImageView>(R.id._gitLinkBtn)
         val ranobeInput = welcomeView.findViewById<LinearLayout>(R.id._ranobeInput)
         val hideRanobeBtn = welcomeView.findViewById<ImageView>(R.id._hideRanobeBtn)
-        val darkDuck = welcomeView.findViewById<ImageView>(R.id._darkDuck)
+        val bigDuck = welcomeView.findViewById<ImageView>(R.id._bigDuck)
         val urlSearch = welcomeView.findViewById<EditText>(R.id._urlSearch)
         //
         // generates welcomeView
@@ -1191,28 +1225,6 @@ class MainActivity : ComponentActivity() {
         //
         ranobeInput.visibility = View.GONE
         hideRanobeBtn.visibility = View.GONE
-
-        // generates onStart() animations
-        val anim = AnimationUtils.loadAnimation(this, R.anim.less_to_max)
-        anim.startOffset = 100
-        val anim1 = AnimationUtils.loadAnimation(this, R.anim.less_to_max)
-        anim1.startOffset = 200
-        val anim2 = AnimationUtils.loadAnimation(this, R.anim.less_to_max)
-        anim2.startOffset = 250
-        val anim3 = AnimationUtils.loadAnimation(this, R.anim.less_to_max)
-        anim3.startOffset = 300
-        val anim4 = AnimationUtils.loadAnimation(this, R.anim.duck_in)
-        anim4.startOffset = 1000
-        anim4.duration = 700
-        //
-
-        // starts animations from above
-        nothingHere.startAnimation(anim)
-        helpInfo.startAnimation(anim1)
-        gitLinkBtn.startAnimation(anim2)
-        addRanobeBtn.startAnimation(anim2)
-        darkDuck.startAnimation(anim4)
-        //
 
         // winking cursor animation
         val animator = ValueAnimator.ofFloat(0f, 2f).apply {
@@ -1295,39 +1307,72 @@ class MainActivity : ComponentActivity() {
             override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
                 when (keyCode) {
                     KeyEvent.KEYCODE_ENTER -> {
+                        if(!isDownloading) {
+                            Thread {
+                                DownloadRanobe("${urlSearch.text}")
+                                runOnUiThread {
+                                    //Update UI
+                                    if(wrongInputURL) {
 
-                        Thread {
+                                        RedImpulse(urlSearch, ranobeInput)
 
-                            DownloadRanobe("${urlSearch.text}")
-                            runOnUiThread {
-                                //Update UI
-                                if(wrongInputURL) {
+                                        if(errPressCount > 0) coolToast("Неправильная ссылка")
+                                        else if (errPressCount > -15) coolToast("Если возникли трудности с загрузкой глав, посетите GitHub проекта")
+                                        else coolToast("Классная анимация, мне тоже нравится")
 
-                                    RedImpulse(urlSearch, ranobeInput)
+                                        errPressCount--
 
-                                    if(errPressCount > 0) coolToast("Неправильная ссылка")
-                                    else if (errPressCount > -15) coolToast("Если возникли трудности с загрузкой глав, посетите GitHub проекта")
-                                    else if (errPressCount > -30) coolToast("Классная анимация, мне тоже нравится")
-                                    else coolToast("Достижение получено!\nКлац клац клац")
+                                        wrongInputURL = false
+                                    }
+                                    if(successConnect) {
 
-                                    errPressCount--
+                                        GreenImpulse(urlSearch, ranobeInput)
 
-                                    wrongInputURL = false
+                                        successConnect = false
+                                    }
+                                    if(parsingError) {
+
+                                        coolToast("Что-то не так. Если проблема не решится, попробуйте снова.")
+
+                                        DeleteChapters()
+
+                                        RedImpulse(urlSearch, ranobeInput)
+
+                                        parsingError = false
+
+                                        isDownloading = false
+                                    }
+                                    if(doesLastChapterDownloaded) {
+
+                                        //change it on notification
+
+                                        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                                        notificationManager.cancel(NOTIFICATION_ID)
+
+                                        ShowNotification("Quack Re.", "Загружено $chaptersAmount глав(ы). Если число не сходится с сайтом, попробуйте снова или посетите GitHub проекта.")
+
+                                        // hide keyboard on main block's load
+                                        fun View.hideKeyboard() {
+                                            val inputManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                            inputManager.hideSoftInputFromWindow(windowToken, 0)
+                                        }
+                                        scrollContainer.hideKeyboard()
+                                        //
+                                        doesLastChapterDownloaded = false
+
+                                        isDownloading = false
+
+                                        val restartAfterDelay = lifecycleScope.launch {
+                                            delay(10)
+                                            RestartApp(applicationContext)
+                                        }
+                                    }
                                 }
-                                if(successConnect) {
-                                    GreenImpulse(urlSearch, ranobeInput)
-                                    successConnect = false
-                                }
-                                if(tooManyRequests) {
-                                    coolToast("Не кликайте так часто пожалуйста хдд")
-                                    tooManyRequests = false
-                                }
-                                if(doesLastChapterDownloaded) {
-                                    coolToast("Все главы успешно загружены")
-                                    doesLastChapterDownloaded = false
-                                }
-                            }
-                        }.start()
+                            }.start()
+                        }
+                        else {
+                            coolToast("Скачивание уже началось, ожидайте")
+                        }
                     }
                     else -> return false
                 }
@@ -1365,24 +1410,41 @@ class MainActivity : ComponentActivity() {
     }
     //
 
+    private fun DeleteChapters() {
+        var appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+        val chFolder = File(appFolder, chFolderName)
+        for (chapters in chFolder.listFiles()) {
+            chapters.delete()
+        }
+    }
     @SuppressLint("RestrictedApi")
     private fun DownloadRanobe(url: String) {
 
         // checking state of availability url address
         try {
+
+            isDownloading = true
+
             inputURL = URL(url)
+            successConnect = true
+
         } catch (e: Exception) {
+
             wrongInputURL = true
+            isDownloading = false
+
             return
         }
         //
-        successConnect = true
 
-        // this block it's start point of parser. here program tries to find "first-next" chapter
-
-        nextChapterFromHTML = "$url/v1/c0"
+        // this block it's start point of parser. here program tries to find сhapters
+        nextChapterFromHTML = "$url"
+        var isSecondParse = false
 
         while (true) {
+
+            ShowImmortalNotification("Идёт загрузка глав", "Главы загружаются, пожалуйста подождите.")
+
             try {
                 Log.i("DOWNLOADING", "$nextChapterFromHTML")
 
@@ -1391,35 +1453,25 @@ class MainActivity : ComponentActivity() {
 
                 var getText = ""
 
-                if (html.contains("<div class=\"article-image\">")) {
-
-                    // here means, chapter has images
-
-                    val pText = html
-                        .substringAfterLast("<div class=\"reader-container container container_center\">")
-                        .substringBefore("<div class=\"article-image\">")
-                        .replace("<p>", "")
-                        .replace("</p>", "")
-                        .replace("&nbsp;", "")
-                        .substringAfter("\n")
-                        .substringBeforeLast("\n")
-
-                    getText = pText
-                } else {
-
-                    // here means, chapter has NO images
-
-                    val pText = html
-                        .substringAfterLast("<div class=\"reader-container container container_center\">")
+                if (html.contains("reader-header-action__text text-truncate")) {
+                    ranobeTitle = html
+                        .substringAfterLast("<div class=\"reader-header-action__text text-truncate\">")
                         .substringBefore("</div>")
-                        .replace("<p>", "")
-                        .replace("</p>", "")
-                        .replace("&nbsp;", "")
-                        .substringAfter("\n")
-                        .substringBeforeLast("\n")
-
-                    getText = pText
+                        .replace("       ", "")
+                        .replace("\n","")
+                        .replace("      ","")
+                    SaveData()
                 }
+
+                getText = html
+                    .substringAfter("<div class=\"reader-container container container_center\">")
+                    .substringBefore("</div> <!-- --> <!-- -->")
+                    .replace("<p>","")
+                    .replace("</p>","")
+                    .replace("&nbsp;","")
+                    .replace("    ","")
+                    .substringAfter("\n")
+
                 var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c")
                 if (volume.toDouble() < 10) {
                     volume = "00$volume"
@@ -1444,21 +1496,96 @@ class MainActivity : ComponentActivity() {
                 writerChData.close()
 
                 for (line in html.lines()) {
-                    if(line.contains("Последняя глава прочитана")) {
+                    // this downloading process works twice, because of my crab hands...
+                    // somehow one or couple chapters doesn't downloads if this operation goes once
+                    if(line.contains("Последняя глава прочитана") && isSecondParse) {
+                        chaptersAmount = anotherFolder.listFiles().size
                         doesLastChapterDownloaded = true
+                        isDownloading = false
                         return
                     }
+                    else if(line.contains("Последняя глава прочитана") && !isSecondParse) {
+                        isSecondParse = true
+                        nextChapterFromHTML = "$url"
+                    }
+                    //
                     if(line.contains("Следующая глава"))
                         nextChapterFromHTML = line
+                    //
                 }
                 nextChapterFromHTML = nextChapterFromHTML
                     .substringAfter("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
                     .substringBefore("\" tabindex=\"-1\"> <span>Следующая глава</span>")
+                    .substringBefore("?bid")
             } catch (e: Exception) {
-                tooManyRequests = true
+                Log.i("ERRORRRR", "$e")
+                isDownloading = false
+                parsingError = true
                 return
             }
         }
         //
     }
+    
+    // restarts app, when needed
+    private fun RestartApp(context : Context) {
+        val packageManager = context.packageManager
+        val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+        val componentName = intent?.component
+        val mainIntent = Intent.makeRestartActivityTask(componentName)
+        context.startActivity(mainIntent)
+        Runtime.getRuntime().exit(0)
+    }
+    //
+    
+    // notification, that might be closed
+    @SuppressLint("MissingPermission")
+    private fun ShowNotification(title: String, text: String) {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setColor(Color.TRANSPARENT)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setStyle(NotificationCompat.BigTextStyle())
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(NOTIFICATION_ID, builder.build())
+        }
+    }
+    //
+    
+    // notification, that can't be closed
+    @SuppressLint("MissingPermission")
+    private fun ShowImmortalNotification(title: String, text: String) {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setOngoing(true)
+            .setColor(Color.TRANSPARENT)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setStyle(NotificationCompat.BigTextStyle())
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(NOTIFICATION_ID, builder.build())
+        }
+    }
+    //
+
+    // notification channel (since oreo did)
+    private fun CreateNotificationChannel() {
+        val name = "Quack!"
+        val descriptionText = "Показывает статус загрузки глав, не более"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(CHANNEL_ID, name, importance)
+        channel.description = descriptionText
+        // Register the channel with the system
+        val notificationManager: NotificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+    //
 }

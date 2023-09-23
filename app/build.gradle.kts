@@ -35,6 +35,7 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.4.3"
@@ -45,7 +46,6 @@ android {
         }
     }
 }
-
 dependencies {
 
     implementation ("org.jsoup:jsoup:1.13.1")
