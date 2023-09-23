@@ -723,7 +723,11 @@ class MainActivity : ComponentActivity() {
 
         // if certain chapter has been found, adds it's 'paragraphs content' into chText[]
         val chContent = File("$appFolder/$chFolderName/$chName")
-        for (line in chContent.readLines()) {
+        for (line in chContent.readLines().filter {
+            !it.contains("<div class=\"article-image\">") &&
+            !it.contains("<img class=\"lazyload\"") &&
+            !it.contains("</div>")
+        }) {
             chText += line
         }
         //
@@ -1471,6 +1475,7 @@ class MainActivity : ComponentActivity() {
                     .replace("&nbsp;","")
                     .replace("    ","")
                     .substringAfter("\n")
+                    .substringBeforeLast("\n")
 
                 var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c")
                 if (volume.toDouble() < 10) {
