@@ -1,9 +1,6 @@
 package com.example.arifuretareader
 
 import android.Manifest
-import android.Manifest.permission.INTERNET
-import android.Manifest.permission.READ_EXTERNAL_STORAGE
-import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
@@ -11,25 +8,36 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Point
+import android.graphics.PorterDuff
+import android.media.MediaScannerConnection
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
-import android.os.Build.VERSION.SDK_INT
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -52,93 +60,123 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileOutputStream
 import java.io.FileWriter
+import java.io.IOException
 import java.net.URL
 
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var parent: LinearLayout
-    private lateinit var header: LinearLayout
+    lateinit var parent: LinearLayout
+    lateinit var header: LinearLayout
 
-    private lateinit var scrollBar: ScrollView
-    private lateinit var scrollContainer: LinearLayout
-    private lateinit var chapterShownUI: LinearLayout
+    lateinit var scrollBar: ScrollView
+    lateinit var scrollContainer: LinearLayout
+    lateinit var chapterShownUI: LinearLayout
 
-    private lateinit var floatingWindow: LinearLayout
-    private lateinit var centeredBlock: RelativeLayout
+    lateinit var centeredBlock: RelativeLayout
 
-    private lateinit var chapterScrollBar: HorizontalScrollView
-    private lateinit var chapterScrollContainer: LinearLayout
-    private lateinit var chapterScrollBlock: LinearLayout
+    lateinit var picContainer: LinearLayout
+    lateinit var picGalleryScrollBar: HorizontalScrollView
+    lateinit var picGalleryScrollLayout: LinearLayout
+    lateinit var picGalleryScrollContainer: LinearLayout
+    lateinit var picGalleryHelpingArrow: ImageView
 
-    private lateinit var chapterUIscrollBar: ScrollView
-    private lateinit var chapterUIscrollContainer: LinearLayout
-    private lateinit var chapterUIscrollBlock: LinearLayout
+    lateinit var customScrollBar: FrameLayout
+    lateinit var customScrollBarRed: LinearLayout
+    lateinit var customScrollBarYellow: LinearLayout
+    lateinit var customScrollBarBlue: LinearLayout
+    lateinit var customScrollBarCyan: LinearLayout
+    lateinit var customScrollBarWhite: LinearLayout
+    lateinit var customScrollBarText: TextView
 
-    private lateinit var ranobeName: TextView
-    private var ranobeTitle = ""
+    lateinit var chapterScrollBar: HorizontalScrollView
+    lateinit var chapterScrollContainer: LinearLayout
+    lateinit var chapterScrollBlock: LinearLayout
+    lateinit var chapterUInumTome: TextView
 
-    private val chScrollContainerArr = mutableListOf<TextView>()
-    private val chUIscrollContainerArr = mutableListOf<TextView>()
+    lateinit var chapterUIscrollBar: ScrollView
+    lateinit var chapterUIscrollContainer: LinearLayout
+    lateinit var chapterUIscrollBlock: LinearLayout
 
-    private var isChUIshown = false
+    lateinit var ranobeName: TextView
+    var ranobeTitle = ""
 
-    private lateinit var closeFw: ImageView
-    private lateinit var openChUIbtn: ImageView
-    private lateinit var duckCustomizerBtn: ImageView
-    private lateinit var delRanobeBtn: ImageView
-    private lateinit var nextBtn: ImageView
-    private lateinit var backBtn: ImageView
-    private lateinit var toBmBtn: ImageView
-    private lateinit var swapThemeBtn: ImageView
+    val chScrollContainerArr = mutableListOf<TextView>()
+    val chUIscrollContainerArr = mutableListOf<TextView>()
 
-    private var duckLayout = mutableListOf<LinearLayout>() // duck's layout for properly work stuff below
-    private var duckArr = mutableListOf<ImageView>() // duck bookmarks
+    var isChUIshown = false
 
-    private val paragraphArr = mutableListOf<TextView>() // text of whole paragraphs in chapter
-    private var paragraphCount = 0
-    private var paragraphIndex = 0
-    private lateinit var paragraphBuffer: Job
-    private lateinit var chJob: Job
-    private lateinit var chUIjob: Job
+    lateinit var closeFw: ImageView
+    lateinit var openChUIbtn: ImageView
+    lateinit var duckCustomizerBtn: ImageView
+    lateinit var delRanobeBtn: ImageView
+    lateinit var nextBtn: ImageView
+    lateinit var backBtn: ImageView
+    lateinit var toBmBtn: ImageView
+    lateinit var swapThemeBtn: ImageView
 
-    private var scrollPos = 0
-    private var chScrollPos = 0
+    var duckLayout = mutableListOf<LinearLayout>() // duck's layout for properly work stuff below
+    var duckArr = mutableListOf<ImageView>() // duck bookmarks
 
-    private var bookMarked = false
+    val paragraphArr = mutableListOf<TextView>() // text of whole paragraphs in chapter
+    var paragraphCount = 0
+    var paragraphIndex = 0
+    lateinit var paragraphBuffer: Job
+    lateinit var chJob: Job
+    lateinit var chUIjob: Job
 
-    private var lightTheme = false
+    var imageArr = mutableListOf<ImageView>() // preview of certain chapter
+    var imagesArr = mutableListOf<ImageView>() // pictures of certain chapter
+    lateinit var picBuffer: Job
 
-    private var delPressCount = 5 // before delete chapters from app, you pressing btn 5 times
-    private var errPressCount = 5 // before tell advice to use, he tries 5 time by himself
+    lateinit var customScrBbuffer: Job
 
-    private var appFolderName = "Quack Re."
+    var scrollPos = 0
+    var chScrollPos = 0
+    var chUIscrollPos = 0
+    var selectedChH = 0
+    // locals that moved to globals for some reasons
+    var of = 0
+    var oldScr = 0
+    var oldOf = 0
+    //
 
-    private var bMdataFileName = "storedData.txt"
-    private var storedBmDataArr = mutableListOf<String>()
+    var bookMarked = false
 
-    private var chDataFileName = "chStoredData.txt"
-    private var storedChDataArr = mutableListOf<String>()
+    var lightTheme = false
 
-    private var ranobeTitleFileName = "ranobeTitle.txt"
+    var delPressCount = 5 // before delete chapters from app, you pressing btn 5 times
+    var errPressCount = 5 // before tell advice to use, he tries 5 time by himself
 
-    private lateinit var inputURL : URL
-    private lateinit var nextChapterFromHTML : String
-    private var wrongInputURL  = false // send when link isn't valid
-    private var successConnect = false // send when link is valid
-    private var parsingError = false // send when somehow can't download chapters
-    private var doesLastChapterDownloaded = false // send when last chapter has been parsed and saved
-    private var isDownloading = false // send when can't press enter btn to download chapters from ranobelib
-    private var chaptersAmount = 0
-    private var needFilter = true
+    var appFolderName = "Quack Re."
 
-    private var chFolderName = "Chapters"
-    private var chIndex = 0
-    private var chText = mutableListOf<String>() // paragraphs content
-    private var chNumArr = mutableListOf<String>() // names of all chapters files
+    var bMdataFileName = "storedData.txt"
+    var storedBmDataArr = mutableListOf<String>()
 
-    private val PERMISSION_CODE = 100
+    var chDataFileName = "chStoredData.txt"
+    var storedChDataArr = mutableListOf<String>()
+
+    var ranobeTitleFileName = "ranobeTitle.txt"
+
+    lateinit var inputURL : URL
+    lateinit var nextChapterFromHTML : String
+    var wrongInputURL  = false // send when link isn't valid
+    var successConnect = false // send when link is valid
+    var parsingError = false // send when somehow can't download chapters
+    var doesLastChapterDownloaded = false // send when last chapter has been parsed and saved
+    var isDownloading = false // send when can't press enter btn to download chapters from ranobelib
+    var chaptersAmount = 0
+
+    var chFolderName = "Chapters"
+    var chIndex = 0
+    var chText = mutableListOf<String>() // paragraphs content
+    var chNumArr = mutableListOf<String>() // names of all chapters files
+
+    var picFolderName = ".Pictures"
+
+    val PERMISSION_CODE = 100
 
     companion object {
         const val NOTIFICATION_ID = 101
@@ -148,7 +186,6 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("RestrictedApi", "SetTextI18n", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-
         // creates any UI when onCreate() has been awaken
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -160,6 +197,18 @@ class MainActivity : ComponentActivity() {
         centeredBlock = findViewById(R.id._centered_block)
         ranobeName = findViewById(R.id._ranobeName)
         chapterShownUI = findViewById(R.id._chapterShownUI)
+        picContainer = findViewById(R.id._picture_container)
+        picGalleryScrollLayout = findViewById(R.id._picture_gallery_scroll_layout)
+        picGalleryScrollBar = findViewById(R.id._picture_gallery_scroll_bar)
+        picGalleryScrollContainer = findViewById(R.id._picture_gallery_scroll_container)
+        picGalleryHelpingArrow = findViewById(R.id._picture_gallery_helping_arrow)
+        customScrollBar = findViewById(R.id._customScrollBar)
+        customScrollBarRed = findViewById(R.id._customScrollBarRed)
+        customScrollBarYellow = findViewById(R.id._customScrollBarYellow)
+        customScrollBarBlue = findViewById(R.id._customScrollBarBlue)
+        customScrollBarCyan = findViewById(R.id._customScrollBarCyan)
+        customScrollBarWhite = findViewById(R.id._customScrollBarWhite)
+        customScrollBarText = findViewById(R.id._customScrollBarText)
         scrollContainer = findViewById(R.id._scrollContainer)
         scrollBar = findViewById(R.id._scrollBar)
         chapterScrollBar = findViewById(R.id._chapterScrollBar)
@@ -167,6 +216,7 @@ class MainActivity : ComponentActivity() {
         chapterScrollBlock = findViewById(R.id._chapterScrollBlock)
         chapterUIscrollBar = findViewById(R.id._chapterUIscrollBar)
         chapterUIscrollContainer = findViewById(R.id._chapterUIscrollContainer)
+        chapterUInumTome = findViewById(R.id._chapter_UI_num_tome)
         chapterUIscrollBlock = findViewById(R.id._chapterUIscrollBlock)
         openChUIbtn = findViewById(R.id._toCurrentChapter)
         duckCustomizerBtn = findViewById(R.id._duckCustomizerBtn)
@@ -178,39 +228,6 @@ class MainActivity : ComponentActivity() {
         //
 
         CreateNotificationChannel()
-
-        // generates 'condition container' to make sure that app can work properly when executing code below
-        fun AllowPermissionBlock() {
-            RequestPermission()
-
-            val permView = layoutInflater.inflate(R.layout.perm_view, null)
-            // clears UI
-            header.visibility = View.GONE
-            chapterScrollBlock.visibility = View.GONE
-            chapterUIscrollBlock.visibility = View.GONE
-            //
-
-            // generates 'request view'
-            centeredBlock.addView(permView)
-            //
-
-            // winking cursor animation
-            val nothingHere = permView.findViewById<TextView>(R.id._permText)
-            val animator = ValueAnimator.ofFloat(0f, 2f).apply {
-                addUpdateListener { animation ->
-                    if (animation.animatedValue as Float <= 1f) {
-                        nothingHere.text =
-                            "Откройте приложению доступ к файлам и перезагрузите его, чтобы продолжить использование_"
-                    } else nothingHere.text =
-                        "Откройте приложению доступ к файлам и перезагрузите его, чтобы продолжить использование"
-                }
-                duration = 1000
-                repeatCount = Animation.INFINITE
-                start()
-            }
-            //
-        }
-        //
 
         if (!CheckPermission()) {
             AllowPermissionBlock()
@@ -231,58 +248,50 @@ class MainActivity : ComponentActivity() {
             return // returning this, because code below can be executed only if user has one or more chapters in certain folder
         }
         //
-
         // connect this to some data file in future and to theme changer
         swapThemeBtn.setImageDrawable(getDrawable(R.drawable.dark_theme))
         //
-
         // 'to current chapter in menu' button activity on click
         openChUIbtn.setOnClickListener {
 
             isChUIshown = !isChUIshown
 
             if (!isChUIshown) {
-                openChUIbtn.startAnimation(
-                    AnimationUtils.loadAnimation(
-                        this,
-                        R.anim.rotate_from_180_fa
-                    )
-                )
+                openChUIbtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_from_180_fa))
                 delRanobeBtn.visibility = View.GONE
+                chapterUInumTome.visibility = View.GONE
                 duckCustomizerBtn.visibility = View.VISIBLE
 
                 chapterScrollBar.visibility = View.VISIBLE
-                chapterScrollBar.animate().alpha(1f).setDuration(250)
-                    .setInterpolator(AccelerateDecelerateInterpolator()).start()
 
                 scrollContainer.animate().alpha(1f).setDuration(250)
                     .setInterpolator(AccelerateDecelerateInterpolator()).start()
 
+                picContainer.animate().alpha(1f).setDuration(250)
+                    .setInterpolator(DecelerateInterpolator()).start()
+
                 chapterShownUI.animate().translationY(dpToFloat(500)).setDuration(250)
                     .setInterpolator(AccelerateDecelerateInterpolator()).start()
             } else {
-                openChUIbtn.startAnimation(
-                    AnimationUtils.loadAnimation(
-                        this,
-                        R.anim.rotate_to_180_fa
-                    )
-                )
+                openChUIbtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_to_180_fa))
                 delRanobeBtn.visibility = View.VISIBLE
                 duckCustomizerBtn.visibility = View.GONE
+                chapterScrollBar.visibility = View.GONE
+                chapterUInumTome.visibility = View.VISIBLE
 
-                chapterScrollBar.animate().alpha(0f).setDuration(250)
-                    .setInterpolator(DecelerateInterpolator()).start()
-                if (chapterScrollBar.alpha == 0f)
-                    chapterScrollBar.visibility = View.INVISIBLE
 
                 scrollContainer.animate().alpha(0.4f).setDuration(250)
+                    .setInterpolator(DecelerateInterpolator()).start()
+
+                picContainer.animate().alpha(0.4f).setDuration(250)
                     .setInterpolator(DecelerateInterpolator()).start()
 
                 chapterShownUI.animate().translationY(0f).setDuration(250)
                     .setInterpolator(DecelerateInterpolator()).start()
             }
         }
-
+        //
+        // 'change bookmark visuals' button activity on click
         duckCustomizerBtn.setOnClickListener {
             duckCustomizerBtn.startAnimation(
                 AnimationUtils.loadAnimation(
@@ -291,6 +300,8 @@ class MainActivity : ComponentActivity() {
                 )
             )
         }
+        //
+        // 'delete ranobe chapters' button activity on click
         delRanobeBtn.setOnClickListener {
 
             delRanobeBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.less_bouncing))
@@ -302,7 +313,10 @@ class MainActivity : ComponentActivity() {
             } else {
 
                 delPressCount = 5
+                customScrBbuffer.cancel()
                 paragraphBuffer.cancel()
+                picBuffer.cancel()
+                
                 chJob.cancel()
                 chUIjob.cancel()
 
@@ -315,20 +329,22 @@ class MainActivity : ComponentActivity() {
                 coolToast("Удаление успешно")
             }
         }
-
+        //
         // 'back to done content' button activity on click
         toBmBtn.setOnClickListener {
+
             toBmBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_to_180))
             scrollBar.smoothScrollTo(0, scrollPos)
             chapterScrollBar.smoothScrollTo(chScrollPos, 0)
-            if (scrollBar.scrollY == scrollPos && chapterScrollBar.scrollX == chScrollPos) coolToast(
-                "В прошлый раз вы остановились в этом месте"
-            )
+            chapterUIscrollBar.smoothScrollTo(0, chUIscrollPos)
+            if (scrollBar.scrollY == scrollPos &&
+                chapterScrollBar.scrollX == chScrollPos &&
+                chapterUIscrollBar.scrollY == chUIscrollPos)
+                    coolToast("В прошлый раз вы остановились в этом месте")
             else CheckScrollPos(lifecycleScope)
         }
         //
-
-        // 'change theme' button activity on click
+        // 'swap theme' button activity on click
         swapThemeBtn.setOnClickListener {
 
             lightTheme = !lightTheme
@@ -342,11 +358,13 @@ class MainActivity : ComponentActivity() {
             }
         }
         //
-
         // 'next chapter' button activity on click
         nextBtn.setOnClickListener {
 
+            customScrBbuffer.cancel()
             paragraphBuffer.cancel()
+            picBuffer.cancel()
+            
             chJob.cancel()
             chUIjob.cancel()
 
@@ -369,15 +387,14 @@ class MainActivity : ComponentActivity() {
             scrollBar.scrollTo(0, 0)
 
             chScrollPos = chScrollContainerArr[chIndex].left
+            chUIscrollPos = chUIscrollContainerArr[chIndex].top - selectedChH
 
             chScrollContainerArr.clear()
             chapterScrollContainer.removeAllViews()
             chUIscrollContainerArr.clear()
             chapterUIscrollContainer.removeAllViews()
             ChaptersSelectBlock(lifecycleScope)
-
             SaveData()
-
             ClearReadingBlock()
             EraseBookMarkData()
 
@@ -385,11 +402,12 @@ class MainActivity : ComponentActivity() {
 
         }
         //
-
         // 'previous chapter' button activity on click
         backBtn.setOnClickListener {
 
+            customScrBbuffer.cancel()
             paragraphBuffer.cancel()
+            picBuffer.cancel()
             chJob.cancel()
             chUIjob.cancel()
 
@@ -412,6 +430,7 @@ class MainActivity : ComponentActivity() {
             scrollBar.scrollTo(0, 0)
 
             chScrollPos = chScrollContainerArr[chIndex].left
+            chUIscrollPos = chUIscrollContainerArr[chIndex].top - selectedChH
 
             chScrollContainerArr.clear()
             chapterScrollContainer.removeAllViews()
@@ -428,7 +447,6 @@ class MainActivity : ComponentActivity() {
 
         }
         //
-
         try {
             // generates block with paragraphs when onCreate() has been awaken
             ReadingBlock(lifecycleScope)
@@ -455,361 +473,15 @@ class MainActivity : ComponentActivity() {
         }
     }
     //
-
-    // converts dp to float (my project uses dp values as hell)
-    private fun dpToFloat(sizeInDp: Int): Float {
-        var screenOffset = resources.displayMetrics.density
-        return (sizeInDp * screenOffset)
+    @SuppressLint("SuspiciousIndentation")
+    override fun onStop() {
+        super.onStop()
+        if(isDownloading)
+        ShowNotification("Приложение свёрнуто", "Загрузка происходит в фоновом режиме.")
     }
-    //
-
-    // generates toast message on call
-    private fun coolToast(text: String) {
-        var toast = Toast.makeText(applicationContext, " ", Toast.LENGTH_SHORT)
-        var toastView = layoutInflater.inflate(R.layout.duck_toast, null)
-        var toastTextId = toastView.findViewById<TextView>(R.id._toast_text)
-        toastTextId.text = text
-        toast.view = toastView
-        toast.show()
-    }
-    //
-
-    // checks current scroll position /-> needed only on starting application when paragraphs are still loading to buffer
-    private fun CheckScrollPos(scope: CoroutineScope) {
-        var job = scope.launch {
-            delay(600)
-            if (scrollBar.scrollY != scrollPos) {
-                coolToast("Глава ещё прогружается, пожалуйста подождите...")
-            }
-        }
-    }
-    //
-
-    // requiers permissions on different apis
-    @SuppressLint("RestrictedApi")
-    private fun RequestPermission() {
-        if (SDK_INT >= Build.VERSION_CODES.R) {
-            //Android is 11(R) or above
-            try {
-                val intent = Intent()
-                intent.action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-                val uri = Uri.fromParts("package", this.packageName, null)
-                intent.data = uri
-                storageActivityResultLauncher.launch(intent)
-            } catch (e: Exception) {
-                val intent = Intent()
-                intent.action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-                storageActivityResultLauncher.launch(intent)
-            }
-        } else {
-            //Android is below 11(R)
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE),
-                PERMISSION_CODE
-            )
-        }
-    }
-    //
-
-    // checks permissions on different apis
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun CheckPermission(): Boolean {
-        return if (SDK_INT >= Build.VERSION_CODES.R) {
-            //Android is 11(R) or above
-            Environment.isExternalStorageManager()
-        } else {
-            //Android is below 11(R)
-            val notificatioins = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            val internet = ContextCompat.checkSelfPermission(this, INTERNET)
-            val write = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE)
-            val read = ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE)
-            notificatioins == PackageManager.PERMISSION_GRANTED && internet == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED
-        }
-    }
-    //
-
-    // idk what is this lol
-    @SuppressLint("RestrictedApi")
-    private val storageActivityResultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            //here we will handle the result of our intent
-            if (SDK_INT >= Build.VERSION_CODES.R) {
-                //Android is 11(R) or above
-                if (Environment.isExternalStorageManager()) {
-                    //Manage External Storage Permission is granted
-                } else {
-                    //Manage External Storage Permission is denied....
-                }
-            } else {
-                //Android is below 11(R)
-            }
-        }
-    //
-
-    // same as with above
-    @SuppressLint("RestrictedApi")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE) {
-            if (grantResults.isNotEmpty()) {
-                //check each permission if granted or not
-                val write = grantResults[0] == PackageManager.PERMISSION_GRANTED
-                val read = grantResults[1] == PackageManager.PERMISSION_GRANTED
-                val internet = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                if (write && read && internet) {
-                    //External Storage Permission granted
-                } else {
-                    //External Storage Permission denied...
-                }
-            }
-        }
-    }
-    //
-
-    // creates certain folders and data files
-    private fun CreateContentStorage() {
-        // software folder
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-        if (!appFolder.exists()) {
-            appFolder.mkdirs()
-        }
-        //
-
-        // chapters folder
-        val chFolder = File(appFolder, chFolderName)
-        if (!chFolder.exists()) {
-            chFolder.mkdirs()
-        }
-        //
-
-        // creates bookmarks data
-        if (!File(appFolder, bMdataFileName).exists()) {
-            val readerData = File(appFolder, bMdataFileName)
-            val writerData = FileWriter(readerData)
-            writerData.append("false\n0\n0")
-            writerData.flush()
-            writerData.close()
-        }
-        //
-
-        // creates paused chapter data if not exists
-        if (!File(appFolder, chDataFileName).exists()) {
-            val readerChData = File(appFolder, chDataFileName)
-            val writerChData = FileWriter(readerChData)
-            writerChData.append("0\n0")
-            writerChData.flush()
-            writerChData.close()
-        }
-        //
-
-        // creates title data if not exists
-        if (!File(appFolder, ranobeTitleFileName).exists()) {
-            val readerChData = File(appFolder, ranobeTitleFileName)
-            val writerChData = FileWriter(readerChData)
-            writerChData.append("No data")
-            writerChData.flush()
-            writerChData.close()
-        }
-        //
-    }
-
-    // saves (writes) data in files
-    private fun SaveData() {
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        // creates file to store current bookmark's state
-        val readerData = File(appFolder, bMdataFileName)
-        val writerData = FileWriter(readerData)
-        writerData.append("$bookMarked\n$paragraphIndex\n$scrollPos")
-        writerData.flush()
-        writerData.close()
-        //
-
-        // creates file to store current chapter's number
-        val readerChData = File(appFolder, chDataFileName)
-        val writerChData = FileWriter(readerChData)
-        writerChData.append("$chIndex\n$chScrollPos")
-        writerChData.flush()
-        writerChData.close()
-        //
-
-        val readerTiData = File(appFolder, ranobeTitleFileName)
-        val writerTiData = FileWriter(readerTiData)
-        writerTiData.append("$ranobeTitle")
-        writerTiData.flush()
-        writerTiData.close()
-    }
-    //
-
-    // loads bookmark data from storedBmDataArr[]
-    private fun LoadBookMarkData() {
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        // saves file data into storedBmDataArr[]
-        val dataFile = File("$appFolder/$bMdataFileName")
-        for (line in dataFile.readLines()) {
-            storedBmDataArr += line
-        }
-        //
-        // if 'chStoredData.txt' is strange
-        try {
-            bookMarked = storedBmDataArr[0].toBoolean()
-            paragraphIndex = storedBmDataArr[1].toInt()
-            scrollPos = storedBmDataArr[2].toInt()
-        } catch (e: Exception) {
-
-            bookMarked = false
-            paragraphIndex = 0
-            scrollPos = 0
-
-            SaveData()
-
-            coolToast("Ошибка: B0M1DU6K")
-        }
-    }
-    //
-
-    // loads chapter data to chText[] (this array's 'i' is 'paragraphs' in the future)
-    @SuppressLint("RestrictedApi")
-    private fun LoadChapterData() {
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        // loads title data to variable
-        val titleFile = File("$appFolder/$ranobeTitleFileName")
-        for (line in titleFile.readLines()) {
-            ranobeTitle = line
-        }
-        //
-
-        // saves file data into storedChArr[]
-        val dataChFile = File("$appFolder/$chDataFileName")
-        for (line in dataChFile.readLines()) {
-            storedChDataArr += line
-        }
-        //
-
-        // if 'chStoredData.txt' is strange
-        try {
-            chIndex = storedChDataArr[0].toInt()
-            chScrollPos = storedChDataArr[1].toInt()
-        } catch (e: Exception) {
-
-            chIndex = 0
-            chScrollPos = 0
-
-            SaveData()
-
-            coolToast("Ошибка: CH3RDU6K")
-        }
-
-        // number of array equals selected chapter
-        var chName = chNumArr[chIndex]
-        //
-
-        // if some loaded 'chapter name' from 'chapter's array' is no longer available, returns fun with an error
-        if (!File("$appFolder/$chFolderName/$chName").exists()) {
-            coolToast("Ошибка: N0DU6K")
-            return
-        }
-        //
-
-        // if certain chapter has been found, adds it's 'paragraphs content' into chText[]
-        val chContent = File("$appFolder/$chFolderName/$chName")
-        for (line in chContent.readLines().filter {
-            !it.contains("<div class=\"article-image\">") &&
-            !it.contains("<img class=\"lazyload\"") &&
-            !it.contains("</div>")
-        }) {
-            chText += line
-        }
-        //
-    }
-    //
-
-    // deletes all data from storedData.txt
-    private fun EraseBookMarkData() {
-
-        bookMarked = false
-        paragraphIndex = 0
-        scrollPos = 0
-        storedBmDataArr.clear()
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        val readerData = File(appFolder, bMdataFileName)
-        val writerData = FileWriter(readerData)
-        writerData.append("$bookMarked\n$paragraphIndex\n$scrollPos")
-        writerData.flush()
-        writerData.close()
-
-    }
-    //
-
-    // deletes all data from chStoredData.txt
-    private fun EraseChData() {
-
-        chIndex = 0
-        chScrollPos = 0
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        val readerChData = File(appFolder, chDataFileName)
-        val writerChData = FileWriter(readerChData)
-        writerChData.append("$chIndex\n$chScrollPos")
-        writerChData.flush()
-        writerChData.close()
-    }
-    //
-
-    //
-    private fun TextColorNormalize() {
-        // gives to whole text normal (un-bookmarked) color
-        for (i in 0..paragraphCount) {
-            paragraphArr[i].setTextColor(getColor(R.color._textColor))
-            scrollPos = 0
-        }
-        //
-    }
-
-    // searching for any chapter inside 'Chapters' folder
-    private fun ChNumsSearchAndSort() {
-
-        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-
-        val chFolder = File("$appFolder/$chFolderName")
-
-        for (file in chFolder.list()) {
-            var cell = file
-            chNumArr += cell
-        }
-        chNumArr.sort()
-    }
-    //
-
-    // clears stored content inside 'ReadingBlock'
-    private fun ClearReadingBlock() {
-
-        chText.clear()
-        paragraphArr.clear()
-        duckArr.clear()
-        duckLayout.clear()
-        storedChDataArr.clear()
-        scrollContainer.removeAllViews()
-
-    }
-    //
-
     // Block with chapter's content
     @SuppressLint("ClickableViewAccessibility")
-    private fun ReadingBlock(scope: CoroutineScope) {
+    fun ReadingBlock(scope: CoroutineScope) {
 
         centeredBlock.visibility = View.GONE
 
@@ -820,10 +492,6 @@ class MainActivity : ComponentActivity() {
         ranobeName.text = ranobeTitle
         //
 
-        // duck bookmark
-        val duckView = layoutInflater.inflate(R.layout.duck_toast, null)
-        //
-
         paragraphCount = chText.lastIndex
 
         for (i in 0..paragraphCount) {
@@ -831,11 +499,187 @@ class MainActivity : ComponentActivity() {
             duckLayout += LinearLayout(this)
             duckArr += ImageView(this)
         }
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+        val picFolder = File(appFolder, picFolderName)
+
+        // generates solo picture as chapter's preview?
+        picBuffer = scope.launch {
+            if(File(picFolder, "${chNumArr[chIndex].substringBefore(".txt")}").exists()) {
+
+                val chPicFolder = File(picFolder, "${chNumArr[chIndex].substringBefore(".txt")}")
+
+                for (i in 0..chPicFolder.listFiles().size) {
+                    imageArr += ImageView(applicationContext)
+                    imagesArr += ImageView(applicationContext)
+                }
+
+                for (pics in chPicFolder.listFiles()) {
+
+                    val img = imagesArr[chPicFolder.listFiles().indexOf(pics)]
+
+                    val bitmap = BitmapFactory.decodeFile(pics.absolutePath)
+                    val roBitmap = ImageHelper.getRoundedCornerBitmap(bitmap, dpToFloat(30).toInt())
+
+                    var bmW = roBitmap.width
+                    var bmH = roBitmap.height
+
+                    while(bmW > dpToFloat(370).toInt()) {
+                        bmW = (bmW/1.1).toInt()
+                        bmH = (bmH/1.1).toInt()
+                    }
+                    while(bmW < dpToFloat(360).toInt()) {
+                        bmW = (bmW*1.1).toInt()
+                        bmH = (bmH*1.1).toInt()
+                    }
+
+                    img.setImageBitmap(Bitmap.createScaledBitmap(roBitmap, bmW, bmH, false))
+                    if(imagesArr.size > 2) {
+
+                        img.setPadding(
+                            dpToFloat(10).toInt(),
+                            dpToFloat(10).toInt(),
+                            dpToFloat(10).toInt(),
+                            dpToFloat(10).toInt()
+                        )
+                    }
+                    else {
+
+                        val displayMetrics = DisplayMetrics()
+                        windowManager.defaultDisplay.getMetrics(displayMetrics)
+                        img.setPadding(
+                            (displayMetrics.widthPixels - getViewWidth(img))/2,
+                            0,
+                            (displayMetrics.widthPixels - getViewWidth(img))/2,
+                            0
+                        )
+                    }
+
+                    picGalleryScrollContainer.addView(img)
+
+                    img.setOnClickListener {
+
+                        if(isChUIshown) {
+                            ClearChSelBlock()
+                            return@setOnClickListener
+                        }
+
+                        customScrollBar.visibility = View.VISIBLE
+                        scrollBar.visibility = View.VISIBLE
+                        header.visibility = View.VISIBLE
+                        chapterShownUI.visibility = View.VISIBLE
+
+                        picGalleryScrollLayout.visibility = View.GONE
+
+                        val job = lifecycleScope.launch {
+                            delay(1)
+                            picGalleryScrollBar.scrollTo(dpToFloat(0).toInt(),0)
+                        }
+
+                        for(v in imageArr) {
+                            v.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.simple_appearing))
+                        }
+                    }
+                }
+
+                // generates pic as a chapter's preview
+                for (pic in chPicFolder.listFiles()) {
+
+                    val img = imageArr[chPicFolder.listFiles().indexOf(pic)]
+
+                    val bitmap = BitmapFactory.decodeFile(pic.absolutePath)
+                    val roBitmap = ImageHelper.getRoundedCornerBitmap(bitmap, dpToFloat(30)
+                        .toInt())
+
+                    img.setImageBitmap(roBitmap)
+
+                    img.layoutParams = LinearLayout.LayoutParams(
+                        dpToFloat(400).toInt(),
+                        dpToFloat(400).toInt()
+                    )
+                    img.setPadding(
+                        dpToFloat(30).toInt(),
+                        dpToFloat(5).toInt(),
+                        dpToFloat(30).toInt(),
+                        dpToFloat(30).toInt())
+                    img.foregroundGravity = Gravity.CENTER
+                    img.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.simple_appearing))
+
+                    picContainer.addView(img)
+
+                    img.setOnClickListener {
+
+                        if(isChUIshown) {
+                            ClearChSelBlock()
+                            return@setOnClickListener
+                        }
+
+                        customScrollBar.visibility = View.GONE
+                        scrollBar.visibility = View.GONE
+                        header.visibility = View.GONE
+                        chapterShownUI.visibility = View.GONE
+
+                        picGalleryScrollLayout.visibility = View.VISIBLE
+                        picGalleryScrollContainer.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.simple_appearing))
+
+                        val job = lifecycleScope.launch {
+
+                            if(imagesArr.size > 2) {
+                                picGalleryHelpingArrow.visibility = View.VISIBLE
+                                picGalleryHelpingArrow.animation = AnimationUtils.loadAnimation(applicationContext, R.anim.helping_arrow)
+                            }
+                            else picGalleryHelpingArrow.visibility = View.GONE
+                            delay(10)
+                            picGalleryScrollBar.smoothScrollTo(dpToFloat(60).toInt(),0)
+                            delay(500)
+                            picGalleryScrollBar.smoothScrollTo(dpToFloat(0).toInt(),0)
+                        }
+                    }
+                    // returns process if pics in chapter's folder more than 1
+                    if(chPicFolder.listFiles().size > 1)
+                        return@launch
+                    //
+                }
+                //
+            }
+        }
+        //
+
+        // block to create UI with chapter's images
+        // ...
+        //
+
+        customScrBbuffer = scope.launch {
+            while (true) {
+
+                val offset = dpToFloat(860) * ((scrollBar.scrollY / (getViewHeight(scrollContainer).toFloat() - 10*dpToFloat(60))))
+                val maxOffset = dpToFloat(860) * ((scrollBar.bottom / (getViewHeight(scrollContainer).toFloat() - 10*dpToFloat(60))))
+
+                customScrollBarRed.translationY = offset * 0.99f
+                customScrollBarYellow.translationY = offset * 0.995f
+                customScrollBarBlue.translationY = offset * 1.01f
+                customScrollBarCyan.translationY = offset * 1.005f
+                customScrollBarWhite.translationY = offset
+
+                customScrollBarText.translationY = dpToFloat(50) + offset
+                customScrollBarText.translationX = dpToFloat(8)
+                customScrollBarText.pivotX = getViewWidth(customScrollBarText) / 2f
+                customScrollBarText.pivotY = getViewHeight(customScrollBarText) / 2f
+                customScrollBarText.rotation = 90f
+
+                delay(1)
+            }
+        }
+
         paragraphBuffer = scope.launch {
+            var posOff = 0
             for (paragraph in paragraphArr) {
 
                 // back position of scroll bar to bottom horizontal chapter's bar
-                chapterScrollBar.scrollTo(chScrollPos, 0) // this is here, because of multiple updates...hahahn't
+                if(posOff != 10) {
+                    chapterScrollBar.scrollTo(chScrollPos, 0) // this is here, because of multiple updates...hahahn't
+                    posOff += 1
+                }
                 //
 
                 if (paragraphArr.indexOf(paragraph) < paragraphArr.size) {
@@ -847,7 +691,8 @@ class MainActivity : ComponentActivity() {
                     paragraph.setTextColor(getColor(R.color._textColor))
                     paragraph.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                     if (paragraphArr.indexOf(paragraph) != paragraphArr.lastIndex)
-                        paragraph.setPadding(dpToFloat(30).toInt(), 0, dpToFloat(30).toInt(), 0)
+                        paragraph.setPadding(
+                            dpToFloat(30).toInt(), 0, dpToFloat(30).toInt(), 0)
                     else
                         paragraph.setPadding(
                             dpToFloat(30).toInt(),
@@ -882,7 +727,8 @@ class MainActivity : ComponentActivity() {
                     )
                     duckId.scaleX = 1.3f
                     duckId.scaleY = 1.3f
-                    duckId.setPadding(0, dpToFloat(10).toInt(), 0, dpToFloat(10).toInt())
+                    duckId.setPadding(0, dpToFloat(10).toInt(), 0, dpToFloat(10)
+                        .toInt())
                     duckId.visibility = View.INVISIBLE
                     duckId.foregroundGravity = Gravity.LEFT
                     //
@@ -894,7 +740,8 @@ class MainActivity : ComponentActivity() {
 
                     paragraph.setOnClickListener {
 
-                        if (isChUIshown) {
+                        if(isChUIshown) {
+                            ClearChSelBlock()
                             return@setOnClickListener
                         }
 
@@ -924,6 +771,9 @@ class MainActivity : ComponentActivity() {
 
                             SaveData()
 
+                            toBmBtn.setColorFilter(getColor(R.color._duckBodyColor), PorterDuff.Mode.SRC_IN)
+                            toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
+
                             scrollBar.smoothScrollTo(0, scrollContainer.height)
 
                             for (i in 0..paragraphArr.lastIndex) {
@@ -939,7 +789,8 @@ class MainActivity : ComponentActivity() {
                     // 'duck bookmark' button activity on click
                     duckLayoutId.setOnClickListener {
 
-                        if (isChUIshown) {
+                        if(isChUIshown) {
+                            ClearChSelBlock()
                             return@setOnClickListener
                         }
 
@@ -962,6 +813,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 duckArr[i].visibility = View.INVISIBLE
                             }
+                            toBmBtn.setColorFilter(getColor(R.color._sideColor), PorterDuff.Mode.SRC_IN)
+                            toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
                             TextColorNormalize()
                         } else {
                             for (i in 0..paragraphArr.lastIndex) {
@@ -973,18 +826,24 @@ class MainActivity : ComponentActivity() {
                             for (i in 0..paragraphIndex) {
                                 paragraphArr[i].setTextColor(getColor(R.color._sideColor))
                             }
+                            toBmBtn.setColorFilter(getColor(R.color._duckBodyColor), PorterDuff.Mode.SRC_IN)
+                            toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
                         }
                     }
                     if (!bookMarked) {
                         for (i in 0..paragraphArr.lastIndex) {
                             duckArr[i].visibility = View.INVISIBLE
                         }
+                        toBmBtn.setColorFilter(getColor(R.color._sideColor), PorterDuff.Mode.SRC_IN)
+                        toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
                         TextColorNormalize()
                     } else {
                         duckArr[paragraphIndex].visibility = View.VISIBLE
                         for (i in 0..paragraphIndex) {
                             paragraphArr[i].setTextColor(getColor(R.color._sideColor))
                         }
+                        toBmBtn.setColorFilter(getColor(R.color._duckBodyColor), PorterDuff.Mode.SRC_IN)
+                        toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
                     }
                 }
                 delay(1)
@@ -992,10 +851,35 @@ class MainActivity : ComponentActivity() {
         }
     }
     //
+    // clears stored content inside 'ReadingBlock'
+    fun ClearReadingBlock() {
 
+        chText.clear()
+        paragraphArr.clear()
+        duckArr.clear()
+        imageArr.clear()
+        imagesArr.clear()
+        picContainer.removeAllViews()
+        picGalleryScrollContainer.removeAllViews()
+        duckLayout.clear()
+        storedChDataArr.clear()
+        scrollContainer.removeAllViews()
+
+    }
+    //
+    // resets text color of certain content to normal
+    private fun TextColorNormalize() {
+        // gives to whole text normal (un-bookmarked) color
+        for (i in 0..paragraphCount) {
+            paragraphArr[i].setTextColor(getColor(R.color._textColor))
+            scrollPos = 0
+        }
+        //
+    }
+    //
     // Block with chapters selections
     @SuppressLint("ResourceAsColor")
-    private fun ChaptersSelectBlock(scope: CoroutineScope) {
+    fun ChaptersSelectBlock(scope: CoroutineScope) {
 
         var tomeOld = 0.0
         var tomeOldUI = 0.0
@@ -1056,7 +940,10 @@ class MainActivity : ComponentActivity() {
 
                 v.setOnClickListener {
 
+                    customScrBbuffer.cancel()
                     paragraphBuffer.cancel()
+                    picBuffer.cancel()
+                    
                     chJob.cancel()
                     chUIjob.cancel()
 
@@ -1073,12 +960,19 @@ class MainActivity : ComponentActivity() {
                     )
 
                     chScrollPos = v.left
+                    chUIscrollPos = chUIscrollContainerArr[chScrollContainerArr.indexOf(v)].top - selectedChH
 
                     chIndex = chScrollContainerArr.indexOf(v)
 
                     scrollBar.scrollTo(0, 0)
 
                     SaveData()
+
+                    chScrollContainerArr.clear()
+                    chapterScrollContainer.removeAllViews()
+                    chUIscrollContainerArr.clear()
+                    chapterUIscrollContainer.removeAllViews()
+                    ChaptersSelectBlock(lifecycleScope)
                     ClearReadingBlock()
                     EraseBookMarkData()
 
@@ -1087,6 +981,9 @@ class MainActivity : ComponentActivity() {
             }
         }
         chUIjob = scope.launch {
+
+            var height = mutableListOf<Int>()
+
             for (vUI in chUIscrollContainerArr) {
                 // name of the chapter in chapter's select mode
                 var context = chNumArr[chUIscrollContainerArr.indexOf(vUI)].replace(".txt", "")
@@ -1115,90 +1012,197 @@ class MainActivity : ComponentActivity() {
 
                 vUI.gravity = Gravity.CENTER
 
-                vUI.setPadding(0, dpToFloat(25).toInt(), 0, dpToFloat(25).toInt())
-
                 if (chUIscrollContainerArr.indexOf(vUI) == chIndex) {
+
+                    vUI.setPadding(0, dpToFloat(24).toInt(), 0, dpToFloat(24).toInt())
+
+                    vUI.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20f)
                     vUI.setTextColor(getColor(R.color._sideColor))
                 } else {
+
+                    vUI.setPadding(0, dpToFloat(25).toInt(), 0, dpToFloat(25).toInt())
+
+                    vUI.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18f)
                     vUI.setTextColor(getColor(R.color._textColor))
                 }
 
-                vUI.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
 
                 var separator = layoutInflater.inflate(R.layout.separator_tome, null)
                 var tomeText = separator.findViewById<TextView>(R.id._tome_chUI_text)
 
                 tomeText.textAlignment = View.TEXT_ALIGNMENT_CENTER
 
-                tomeText.setPadding(0, dpToFloat(15).toInt(), 0, dpToFloat(15).toInt())
+                tomeText.setPadding(0, dpToFloat(15).toInt(), 0, dpToFloat(20).toInt())
 
+                var sepIndex = 0
                 if (tome.toDouble() != tomeOldUI) {
                     tomeOldUI = tome.toDouble()
                     tomeText.text = "Том $tome"
                     chapterUIscrollContainer.addView(separator)
+
+                    sepIndex = chapterUIscrollContainer.indexOfChild(separator)
+
+                    height += getViewHeight(chapterUIscrollContainer)
+
                 }
                 chapterUIscrollContainer.addView(vUI)
 
+                selectedChH = getViewHeight(vUI)*3
+
                 vUI.setOnClickListener {
 
+                    customScrBbuffer.cancel()
                     paragraphBuffer.cancel()
+                    picBuffer.cancel()
+                    
                     chJob.cancel()
                     chUIjob.cancel()
 
                     for (i in 0..chUIscrollContainerArr.lastIndex) {
+                        chUIscrollContainerArr[i].setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                         chUIscrollContainerArr[i].setTextColor(getColor(R.color._textColor))
                     }
                     for (i in 0..chScrollContainerArr.lastIndex) {
                         chScrollContainerArr[i].setTextColor(getColor(R.color._textColor))
                     }
 
+                    vUI.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
                     vUI.setTextColor(getColor(R.color._sideColor))
                     chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].setTextColor(
                         getColor(R.color._sideColor)
                     )
 
                     chScrollPos = chScrollContainerArr[chUIscrollContainerArr.indexOf(vUI)].left
+                    chUIscrollPos = vUI.top - selectedChH
 
                     chIndex = chUIscrollContainerArr.indexOf(vUI)
 
                     scrollBar.scrollTo(0, 0)
                     chapterScrollBar.scrollTo(chScrollPos, 0)
 
+                    chScrollContainerArr.clear()
+                    chapterScrollContainer.removeAllViews()
+                    chUIscrollContainerArr.clear()
+                    chapterUIscrollContainer.removeAllViews()
+                    ChaptersSelectBlock(lifecycleScope)
                     SaveData()
                     ClearReadingBlock()
                     EraseBookMarkData()
-
-                    isChUIshown = !isChUIshown
-
-                    openChUIbtn.startAnimation(
-                        AnimationUtils.loadAnimation(
-                            applicationContext,
-                            R.anim.rotate_from_180_fa
-                        )
-                    )
-
-                    delRanobeBtn.visibility = View.GONE
-                    duckCustomizerBtn.visibility = View.VISIBLE
-
-                    chapterScrollBar.visibility = View.VISIBLE
-                    chapterScrollBar.animate().alpha(1f).setDuration(250)
-                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
-
-                    scrollContainer.visibility = View.VISIBLE
-                    scrollContainer.animate().alpha(1f).setDuration(250)
-                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
-
-                    chapterShownUI.animate().translationY(dpToFloat(500)).setDuration(250)
-                        .setInterpolator(AccelerateDecelerateInterpolator()).start()
+                    ClearChSelBlock()
 
                     ReadingBlock(lifecycleScope)
                 }
             }
+            while (true) {
+
+                val curScr = chapterUIscrollBar.scrollY
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
+                fun tomeAnim() {
+                    chapterUInumTome.alpha = 0f
+                    chapterUInumTome.scaleX = 0.8f
+                    chapterUInumTome.scaleY = 0.8f
+                    chapterUInumTome.animate().alpha(1f).setDuration(150).start()
+                    chapterUInumTome.animate().scaleX(1f).setDuration(150).start()
+                    chapterUInumTome.animate().scaleY(1f).setDuration(150).start()
+                }
+
+                if (curScr < oldScr && of == 0) {
+                    oldScr = height[of]
+                    chapterUInumTome.text = ">.>"
+
+                    if(oldOf != of) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+                        oldOf = of
+                    }
+                }
+                else if (curScr < oldScr && of != 0) {
+                    oldScr = height[of]
+                    of-=1
+                    chapterUInumTome.text = "Том: $of"
+
+                    if(oldOf != of) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(5, VibrationEffect.DEFAULT_AMPLITUDE))
+                        tomeAnim()
+                        oldOf = of
+                    }
+                }
+                else if(curScr >= height[of] && of != height.lastIndex) {
+                    oldScr = height[of]
+                    of+=1
+                    chapterUInumTome.text = "Том: $of"
+
+                    if(oldOf != of) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+                        tomeAnim()
+                        oldOf = of
+                    }
+                }
+                else if (curScr >= height[of] && of == height.lastIndex) {
+                    oldScr = height[of]
+                    chapterUInumTome.text = "Том: ${of+1}"
+
+                    if(oldOf != of+1) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
+                        tomeAnim()
+                        oldOf = of+1
+                    }
+                }
+                delay(1)
+            }
         }
     }
-    //
+    fun ClearChSelBlock() {
+        isChUIshown = false
 
-    private fun WelcomeViewBlock() {
+        openChUIbtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.rotate_from_180_fa))
+        delRanobeBtn.visibility = View.GONE
+        duckCustomizerBtn.visibility = View.VISIBLE
+        chapterUInumTome.visibility = View.GONE
+
+        chapterScrollBar.visibility = View.VISIBLE
+
+        scrollContainer.animate().alpha(1f).setDuration(250)
+            .setInterpolator(AccelerateDecelerateInterpolator()).start()
+        picContainer.animate().alpha(1f).setDuration(250)
+            .setInterpolator(AccelerateDecelerateInterpolator()).start()
+
+        chapterShownUI.animate().translationY(dpToFloat(500)).setDuration(250)
+            .setInterpolator(AccelerateDecelerateInterpolator()).start()
+    }
+    //
+    fun getViewHeight(view: View): Int {
+        val wm = view.context.getSystemService(WINDOW_SERVICE) as WindowManager
+        val display = wm.defaultDisplay
+        val deviceWidth: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            val size = Point()
+            display.getSize(size)
+            size.x
+        } else {
+            display.width
+        }
+        val widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(deviceWidth, View.MeasureSpec.AT_MOST)
+        val heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        view.measure(widthMeasureSpec, heightMeasureSpec)
+        return view.measuredHeight //        view.getMeasuredWidth();
+    }
+    fun getViewWidth(view: View): Int {
+        val wm = view.context.getSystemService(WINDOW_SERVICE) as WindowManager
+        val display = wm.defaultDisplay
+        val deviceWidth: Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
+            val size = Point()
+            display.getSize(size)
+            size.x
+        } else {
+            display.width
+        }
+        val widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(deviceWidth, View.MeasureSpec.AT_MOST)
+        val heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        view.measure(widthMeasureSpec, heightMeasureSpec)
+        return view.measuredWidth //        view.getMeasuredWidth();
+    }
+    // Block with welcome / download menu
+    fun WelcomeViewBlock() {
 
         EraseChData()
         EraseBookMarkData()
@@ -1267,7 +1271,7 @@ class MainActivity : ComponentActivity() {
                 addRanobeBtn.animate().scaleY(0.8f).setDuration(250)
                     .setInterpolator(DecelerateInterpolator()).start()
 
-                addRanobeBtn.animation = AnimationUtils.loadAnimation(this, R.anim.rotate_45_to)
+                addRanobeBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_45_to))
 
                 ranobeInput.alpha = 0f
                 ranobeInput.animate().alpha(1f).setDuration(250).start()
@@ -1288,7 +1292,7 @@ class MainActivity : ComponentActivity() {
                 addRanobeBtn.animate().scaleY(1f).setDuration(250)
                     .setInterpolator(DecelerateInterpolator()).start()
 
-                addRanobeBtn.animation = AnimationUtils.loadAnimation(this, R.anim.rotate_45_from)
+                addRanobeBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_45_from))
 
                 gitLinkBtn.alpha = 0f
                 gitLinkBtn.animate().alpha(1f).setDuration(250).start()
@@ -1336,15 +1340,28 @@ class MainActivity : ComponentActivity() {
                                     }
                                     if(parsingError) {
 
-                                        coolToast("Что-то не так. Если проблема не решится, попробуйте снова.")
-
                                         DeleteChapters()
 
-                                        RedImpulse(urlSearch, ranobeInput)
+                                        val cancelAfterDelay = lifecycleScope.launch {
 
-                                        parsingError = false
+                                            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                                            notificationManager.cancel(NOTIFICATION_ID)
 
-                                        isDownloading = false
+                                            ShowNotification(
+                                                "Ошибка",
+                                                "Что-то пошло не так, попробуйте загрузить главы по новой."
+                                            )
+
+                                            RedImpulse(urlSearch, ranobeInput)
+
+                                            parsingError = false
+
+                                            isDownloading = false
+
+                                            delay(1000)
+                                        }
+
+
                                     }
                                     if(doesLastChapterDownloaded) {
 
@@ -1353,11 +1370,16 @@ class MainActivity : ComponentActivity() {
                                         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                                         notificationManager.cancel(NOTIFICATION_ID)
 
-                                        ShowNotification("Quack Re.", "Загружено $chaptersAmount глав(ы). Если число не сходится с сайтом, попробуйте снова или посетите GitHub проекта.")
+                                        ShowNotification(
+                                            "Загрузка завершена",
+                                            "Загружено ${chaptersAmount} глав(ы). Если число не сходится с сайтом, попробуйте снова или посетите GitHub проекта."
+                                        )
 
                                         // hide keyboard on main block's load
                                         fun View.hideKeyboard() {
-                                            val inputManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                            val inputManager = context.getSystemService(
+                                                INPUT_METHOD_SERVICE
+                                            ) as InputMethodManager
                                             inputManager.hideSoftInputFromWindow(windowToken, 0)
                                         }
                                         scrollContainer.hideKeyboard()
@@ -1385,9 +1407,651 @@ class MainActivity : ComponentActivity() {
         })
         //
     }
+    //
+    // generates 'condition container' to make sure that app can work properly when executing code below
+    fun AllowPermissionBlock() {
+
+        centeredBlock.visibility = View.VISIBLE
+
+        RequestPermission()
+
+        val permView = layoutInflater.inflate(R.layout.perm_view, null)
+        // clears UI
+        header.visibility = View.GONE
+        chapterScrollBlock.visibility = View.GONE
+        chapterUIscrollBlock.visibility = View.GONE
+        //
+
+        // generates 'request view'
+        centeredBlock.addView(permView)
+        //
+
+        // winking cursor animation
+        val nothingHere = permView.findViewById<TextView>(R.id._permText)
+        val animator = ValueAnimator.ofFloat(0f, 2f).apply {
+            addUpdateListener { animation ->
+                if (animation.animatedValue as Float <= 1f) {
+                    nothingHere.text =
+                        "Откройте приложению доступ к файлам и перезагрузите его, чтобы продолжить использование_"
+                } else nothingHere.text =
+                    "Откройте приложению доступ к файлам и перезагрузите его, чтобы продолжить использование"
+            }
+            duration = 1000
+            repeatCount = Animation.INFINITE
+            start()
+        }
+        //
+    }
+    //
+    // creates certain folders and data files
+    fun CreateContentStorage() {
+        // software folder
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+        if (!appFolder.exists()) {
+            appFolder.mkdirs()
+        }
+        //
+
+        // chapters folder
+        val chFolder = File(appFolder, chFolderName)
+        if (!chFolder.exists()) {
+            chFolder.mkdirs()
+        }
+        //
+
+        // pics folder
+        val picFolder = File(appFolder, picFolderName)
+        if (!picFolder.exists()) {
+            picFolder.mkdirs()
+        }
+        //
+
+        // creates bookmarks data
+        if (!File(appFolder, bMdataFileName).exists()) {
+            val readerData = File(appFolder, bMdataFileName)
+            val writerData = FileWriter(readerData)
+            writerData.append("No data")
+            writerData.flush()
+            writerData.close()
+        }
+        //
+
+        // creates paused chapter data if not exists
+        if (!File(appFolder, chDataFileName).exists()) {
+            val readerChData = File(appFolder, chDataFileName)
+            val writerChData = FileWriter(readerChData)
+            writerChData.append("No data")
+            writerChData.flush()
+            writerChData.close()
+        }
+        //
+
+        // creates title data if not exists
+        if (!File(appFolder, ranobeTitleFileName).exists()) {
+            val readerChData = File(appFolder, ranobeTitleFileName)
+            val writerChData = FileWriter(readerChData)
+            writerChData.append("No data")
+            writerChData.flush()
+            writerChData.close()
+        }
+        //
+    }
+    //
+    // saves (writes) data in files
+    fun SaveData() {
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        // creates file to store current bookmark's state
+        val readerData = File(appFolder, bMdataFileName)
+        val writerData = FileWriter(readerData)
+        writerData.append("${bookMarked}\n${paragraphIndex}\n$scrollPos")
+        writerData.flush()
+        writerData.close()
+        //
+
+        // creates file to store current chapter's number
+        val readerChData = File(appFolder, chDataFileName)
+        val writerChData = FileWriter(readerChData)
+        writerChData.append("$chIndex\n$chScrollPos\n$chUIscrollPos")
+        writerChData.flush()
+        writerChData.close()
+        //
+
+        val readerTiData = File(appFolder, ranobeTitleFileName)
+        val writerTiData = FileWriter(readerTiData)
+        writerTiData.append("$ranobeTitle")
+        writerTiData.flush()
+        writerTiData.close()
+    }
+    //
+    // loads bookmark data from storedBmDataArr[]
+    fun LoadBookMarkData() {
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        // saves file data into storedBmDataArr[]
+        val dataFile = File("$appFolder/${bMdataFileName}")
+        for (line in dataFile.readLines()) {
+            storedBmDataArr += line
+        }
+        //
+        // if 'chStoredData.txt' is strange
+        try {
+            bookMarked = storedBmDataArr[0].toBoolean()
+            paragraphIndex = storedBmDataArr[1].toInt()
+            scrollPos = storedBmDataArr[2].toInt()
+        } catch (e: Exception) {
+
+            bookMarked = false
+            paragraphIndex = 0
+            scrollPos = 0
+
+            SaveData()
+
+            coolToast("Ошибка: B0M1DU6K")
+        }
+    }
+    //
+    // loads chapter data to chText[] (this array's 'i' is 'paragraphs' in the future)
+    @SuppressLint("RestrictedApi")
+    fun LoadChapterData() {
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        // loads title data to variable
+        val titleFile = File("$appFolder/${ranobeTitleFileName}")
+        for (line in titleFile.readLines()) {
+            ranobeTitle = line
+        }
+        //
+
+        // saves file data into storedChArr[]
+        val dataChFile = File("$appFolder/${chDataFileName}")
+        for (line in dataChFile.readLines()) {
+            storedChDataArr += line
+        }
+        //
+
+        // if 'chStoredData.txt' is strange
+        try {
+            chIndex = storedChDataArr[0].toInt()
+            chScrollPos = storedChDataArr[1].toInt()
+            chUIscrollPos = storedChDataArr[2].toInt()
+        } catch (e: Exception) {
+
+            chIndex = 0
+            chScrollPos = 0
+            chUIscrollPos = 0
+
+            SaveData()
+
+            coolToast("Ошибка: CH3RDU6K")
+        }
+
+        // number of array equals selected chapter
+        var chName = chNumArr[chIndex]
+        //
+
+        // if some loaded 'chapter name' from 'chapter's array' is no longer available, returns fun with an error
+        if (!File("$appFolder/${chFolderName}/$chName").exists()) {
+            coolToast("Ошибка: N0DU6K")
+            return
+        }
+        //
+
+        // if certain chapter has been found, adds it's 'paragraphs content' into chText[]
+        val chContent = File("$appFolder/${chFolderName}/$chName")
+        for (line in chContent.readLines().filter {
+            !it.contains("<div class=\"article-image\">") &&
+                    !it.contains("<img class=\"lazyload\"") &&
+                    !it.contains("</div>")
+        }) {
+            chText += line
+        }
+        //
+    }
+    //
+    // deletes all data from storedData.txt
+    fun EraseBookMarkData() {
+
+        bookMarked = false
+        paragraphIndex = 0
+        scrollPos = 0
+        storedBmDataArr.clear()
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        val readerData = File(appFolder, bMdataFileName)
+        val writerData = FileWriter(readerData)
+        writerData.append("${bookMarked}\n${paragraphIndex}\n$scrollPos")
+        writerData.flush()
+        writerData.close()
+
+    }
+    //
+    // deletes all data from chStoredData.txt
+    fun EraseChData() {
+
+        chIndex = 0
+        chScrollPos = 0
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        val readerChData = File(appFolder, chDataFileName)
+        val writerChData = FileWriter(readerChData)
+        writerChData.append("$chIndex\n$chScrollPos")
+        writerChData.flush()
+        writerChData.close()
+    }
+    //
+    // searching for any chapter inside 'Chapters' folder
+    fun ChNumsSearchAndSort() {
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+
+        val chFolder = File("$appFolder/${chFolderName}")
+
+        for (file in chFolder.list()) {
+            chNumArr += file
+        }
+        chNumArr.sort()
+    }
+    //
+    // deletes all content from app folders
+    fun DeleteChapters() {
+        var appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+        val chFolder = File(appFolder, chFolderName)
+        val picFolder = File(appFolder, picFolderName)
+        for (chapters in chFolder.listFiles()) {
+            chapters.delete()
+        }
+        for (f in picFolder.listFiles()) {
+            for( p in f.listFiles()) {
+                p.delete()
+            }
+            f.delete()
+        }
+    }
+    //
+    // notification channel (since oreo did)
+    fun CreateNotificationChannel() {
+        val name = "Quack!"
+        val descriptionText = "Утка села на шпагат, вот и весь анекдот"
+        val importance = NotificationManager.IMPORTANCE_LOW
+        val channel = NotificationChannel(CHANNEL_ID, name, importance)
+        channel.description = descriptionText
+        // Register the channel with the system
+        val notificationManager: NotificationManager =
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+    //
+    // notification, that might be closed
+    @SuppressLint("MissingPermission")
+    fun ShowNotification(title: String, text: String) {
+        val builder = NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setColor(Color.TRANSPARENT)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setStyle(NotificationCompat.BigTextStyle())
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(MainActivity.NOTIFICATION_ID, builder.build())
+        }
+    }
+    //
+    // notification, that can't be closed
+    @SuppressLint("MissingPermission")
+    fun ShowImmortalNotification(title: String, text: String) {
+        val builder = NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+            .setSmallIcon(R.drawable.notification_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setOngoing(true)
+            .setColor(Color.TRANSPARENT)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setStyle(NotificationCompat.BigTextStyle())
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(MainActivity.NOTIFICATION_ID, builder.build())
+        }
+    }
+    //
+    // checks permissions on different apis
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    fun CheckPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            //Android is 11(R) or above
+            Environment.isExternalStorageManager()
+        } else {
+            //Android is below 11(R)
+            val notificatioins = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            val internet = ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET)
+            val write = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            val read = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+            notificatioins == PackageManager.PERMISSION_GRANTED && internet == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED
+        }
+    }
+    //
+    // checks avaliability of the internet connection
+    fun isNetworkAvailable(context: Context?): Boolean {
+        if (context == null) return false
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+            if (capabilities != null) {
+                when {
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                        return true
+                    }
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                        return true
+                    }
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> {
+                        return true
+                    }
+                }
+            }
+        } else {
+            val activeNetworkInfo = connectivityManager.activeNetworkInfo
+            if (activeNetworkInfo != null && activeNetworkInfo.isConnected) {
+                return true
+            }
+        }
+        return false
+    }
+    //
+    // downloads whole content from needed links
+    @SuppressLint("RestrictedApi")
+    fun DownloadRanobe(url: String) {
+
+        // checking state of availability url address
+        try {
+            isDownloading = true
+
+            inputURL = URL(url)
+            successConnect = true
+
+        } catch (e: Exception) {
+
+            wrongInputURL = true
+            isDownloading = false
+            return
+        }
+        //
+
+        // this block it's start point of parser. here program tries to find сhapters
+        nextChapterFromHTML = "$url"
+            .substringBeforeLast("?ui")
+            .substringBeforeLast("&ui")
+            .substringBeforeLast("?page")
+
+        var isSecondParse = false
+
+        while (isDownloading) {
+
+            if(!isNetworkAvailable(applicationContext)) {
+                ShowNotification(
+                    "Нет подключения к интернету",
+                    "Проверьте подключение к интернету, чтобы продолжить"
+                )
+            }
+            else {
+                var noteText = "v${nextChapterFromHTML.substringAfterLast("v").substringBefore("?bid")}"
+                    .replace("v", "Том ")
+                    .replace("/c", ", Глава ")
+
+                if(!isSecondParse)
+                    ShowImmortalNotification(
+                        "Идёт загрузка глав...",
+                        "$noteText"
+                    )
+                if(isSecondParse)
+                    ShowImmortalNotification("Проверка глав...", "$noteText")
+
+                try {
+                    val appFolder = File(Environment.getExternalStorageDirectory(),
+                        appFolderName
+                    )
+                    val anotherFolder = File(appFolder, chFolderName)
+
+                    Log.i("TEXT", "${nextChapterFromHTML}")
+
+                    val doc = Jsoup.connect(nextChapterFromHTML).userAgent("Mozilla").get()
+                    val html = doc.outerHtml()
+
+                    var getText = ""
+
+                    if (html.contains("reader-header-action__text text-truncate")) {
+                        ranobeTitle = html
+                            .substringAfterLast("<div class=\"reader-header-action__text text-truncate\">")
+                            .substringBefore("</div>")
+                            .replace("       ", "")
+                            .replace("\n","")
+                            .replace("      ","")
+                        SaveData()
+                    }
+
+                    getText = html
+                        .substringAfter("<div class=\"reader-container container container_center\">")
+                        .substringBefore("</div> <!-- --> <!-- -->")
+                        .replace("<p>","")
+                        .replace("</p>","")
+                        .replace("&nbsp;","")
+                        .replace("    ","")
+                        .substringAfter("\n")
+                        .substringBeforeLast("\n")
+
+                    var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c").substringBefore(".0")
+                    if (volume.toDouble() < 10) {
+                        volume = "00$volume"
+                    }
+                    else if(volume.toDouble() < 100) {
+                        volume = "0$volume"
+                    }
+
+                    var chapter = nextChapterFromHTML.substringAfterLast("/c").substringBefore(".0")
+                    if (chapter.toDouble() < 10) {
+                        chapter = "00$chapter"
+                    }
+                    else if(chapter.toDouble() < 100) {
+                        chapter = "0$chapter"
+                    }
+
+                    for (line in html.lines()) {
+                        if(line.contains("<img class=\"lazyload\"")) {
+                            val picture = line
+                                .substringAfter("<div class=\"reader-container container container_center\">")
+                                .substringBefore("</div> <!-- --> <!-- -->")
+                                .substringAfter("<img class=\"lazyload\" data-background=\"\" data-src=\"")
+                                .substringBefore("\">")
+                            Log.i("PICTURE", "$picture")
+                            val url = URL(picture)
+                            val image = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                            SaveImage("$volume$chapter", "${picture.substringAfterLast("/").substringBeforeLast(".jpg").substringBeforeLast(".png")}", image)
+                        }
+
+                        val readerChData = File(anotherFolder, "$volume$chapter.txt")
+                        val writerChData = FileWriter(readerChData)
+                        writerChData.append("$getText")
+                        writerChData.flush()
+                        writerChData.close()
+
+                        // this downloading process works twice, because of my crab hands...
+                        // somehow one or couple chapters doesn't downloads if this operation goes once
+                        if(line.contains("Последняя глава прочитана") && isSecondParse) {
+                            chaptersAmount = anotherFolder.listFiles().size
+                            doesLastChapterDownloaded = true
+                            isDownloading = false
+                            return
+                        }
+                        else if (line.contains("Последняя глава прочитана") && !isSecondParse) {
+                            nextChapterFromHTML = "$url"
+                                .substringBeforeLast("?ui")
+                                .substringBeforeLast("&ui")
+                                .substringBeforeLast("?page")
+                            isSecondParse = true
+                        }
+                        //
+                        if(line.contains("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")) {
+                            nextChapterFromHTML = line
+                                .substringAfterLast("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
+                                .substringBefore("\" tabindex=\"-1\">")
+                                .substringAfterLast("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
+                                .substringBefore("\" tabindex=\"-1\">")
+                                .substringBeforeLast("?ui")
+                                .substringBeforeLast("&ui")
+                                .substringBeforeLast("?page")
+                        }
+                        //
+                    }
+
+                    Log.i("LINK","${nextChapterFromHTML}")
+                } catch (e: Exception) {
+
+                }
+                //
+            }
+        }
+    }
+    //
+    // saves imgs from urls (not mine code)
+    @Throws(IOException::class)
+    fun SaveImage(folderName : String, imgName: String, bm: Bitmap) {
+
+        val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
+        val picFolder = File(appFolder, picFolderName)
+        // pic folder
+        val chPicFolder = File(picFolder, folderName)
+        if (!chPicFolder.exists()) {
+            chPicFolder.mkdirs()
+        }
+        //
+
+        val imageFile = File(chPicFolder, "$imgName.png")
+        val out = FileOutputStream(imageFile)
+
+        try {
+            bm.compress(Bitmap.CompressFormat.PNG, 100, out) // Compress Image
+            out.flush()
+            out.close()
+
+            // Tell the media scanner about the new file so that it is
+            // immediately available to the user.
+            MediaScannerConnection.scanFile(applicationContext, arrayOf<String>(imageFile.absolutePath), null) { path, uri ->
+                Log.i("ExternalStorage", "Scanned $path:")
+                Log.i("ExternalStorage", "-> uri=$uri")
+            }
+        } catch (e: java.lang.Exception) {
+            throw IOException()
+        }
+    }
+    //
+    // restarts app, when needed
+    fun RestartApp(context : Context) {
+        val packageManager = context.packageManager
+        val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+        val componentName = intent?.component
+        val mainIntent = Intent.makeRestartActivityTask(componentName)
+        context.startActivity(mainIntent)
+        Runtime.getRuntime().exit(0)
+    }
+    //
+    // requiers permissions on different apis
+    @SuppressLint("RestrictedApi")
+    fun RequestPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            //Android is 11(R) or above
+            try {
+                val intent = Intent()
+                intent.action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+                val uri = Uri.fromParts("package", this.packageName, null)
+                intent.data = uri
+                storageActivityResultLauncher.launch(intent)
+            } catch (e: Exception) {
+                val intent = Intent()
+                intent.action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+                storageActivityResultLauncher.launch(intent)
+            }
+        } else {
+            //Android is below 11(R)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.INTERNET,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ),
+                PERMISSION_CODE
+            )
+        }
+    }
+    //
+    // idk what is this lol
+    @SuppressLint("RestrictedApi")
+    val storageActivityResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            //here we will handle the result of our intent
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                //Android is 11(R) or above
+                if (Environment.isExternalStorageManager()) {
+                    //Manage External Storage Permission is granted
+                } else {
+                    //Manage External Storage Permission is denied....
+                }
+            } else {
+                //Android is below 11(R)
+            }
+        }
+    //
+    // same as with above
+    @SuppressLint("RestrictedApi")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_CODE) {
+            if (grantResults.isNotEmpty()) {
+                //check each permission if granted or not
+                val write = grantResults[0] == PackageManager.PERMISSION_GRANTED
+                val read = grantResults[1] == PackageManager.PERMISSION_GRANTED
+                val internet = grantResults[2] == PackageManager.PERMISSION_GRANTED
+                if (write && read && internet) {
+                    //External Storage Permission granted
+                } else {
+                    //External Storage Permission denied...
+                }
+            }
+        }
+    }
+    //
+    // converts dp to float (my project uses dp values as hell)
+    fun dpToFloat(sizeInDp: Int): Float {
+        var screenOffset = resources.displayMetrics.density
+        return (sizeInDp * screenOffset)
+    }
+    //
+
+    // generates toast message on call
+    fun coolToast(text: String) {
+        var toast = Toast.makeText(applicationContext, " ", Toast.LENGTH_SHORT)
+        var toastView = layoutInflater.inflate(R.layout.duck_toast, null)
+        var toastTextId = toastView.findViewById<TextView>(R.id._toast_text)
+        toastTextId.text = text
+        toast.view = toastView
+        toast.show()
+    }
+    //
 
     // this is for... when error in url line (see welcome block)
-    private fun RedImpulse(view : EditText, animatedView : LinearLayout) {
+    fun RedImpulse(view : EditText, animatedView : LinearLayout) {
 
         val backgroundDrawable = DrawableCompat.wrap(view.background).mutate()
 
@@ -1403,8 +2067,9 @@ class MainActivity : ComponentActivity() {
         view.setHintTextColor(Color.parseColor("#ffffff"))
     }
     //
+
     // this is for... when success in url line (see welcome block)
-    private fun GreenImpulse(view : EditText, animatedView : LinearLayout) {
+    fun GreenImpulse(view : EditText, animatedView : LinearLayout) {
 
         val backgroundDrawable = DrawableCompat.wrap(view.background).mutate()
 
@@ -1413,184 +2078,14 @@ class MainActivity : ComponentActivity() {
         view.setHintTextColor(getColor(R.color._darkerMainColor))
     }
     //
-
-    private fun DeleteChapters() {
-        var appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-        val chFolder = File(appFolder, chFolderName)
-        for (chapters in chFolder.listFiles()) {
-            chapters.delete()
-        }
-    }
-    @SuppressLint("RestrictedApi")
-    private fun DownloadRanobe(url: String) {
-
-        // checking state of availability url address
-        try {
-
-            isDownloading = true
-
-            inputURL = URL(url)
-            successConnect = true
-
-        } catch (e: Exception) {
-
-            wrongInputURL = true
-            isDownloading = false
-
-            return
-        }
-        //
-
-        // this block it's start point of parser. here program tries to find сhapters
-        nextChapterFromHTML = "$url"
-        var isSecondParse = false
-
-        while (true) {
-
-            ShowImmortalNotification("Идёт загрузка глав", "Главы загружаются, пожалуйста подождите.")
-
-            try {
-                Log.i("DOWNLOADING", "$nextChapterFromHTML")
-
-                val doc = Jsoup.connect(nextChapterFromHTML).userAgent("Mozilla").get()
-                val html = doc.outerHtml()
-
-                var getText = ""
-
-                if (html.contains("reader-header-action__text text-truncate")) {
-                    ranobeTitle = html
-                        .substringAfterLast("<div class=\"reader-header-action__text text-truncate\">")
-                        .substringBefore("</div>")
-                        .replace("       ", "")
-                        .replace("\n","")
-                        .replace("      ","")
-                    SaveData()
-                }
-
-                getText = html
-                    .substringAfter("<div class=\"reader-container container container_center\">")
-                    .substringBefore("</div> <!-- --> <!-- -->")
-                    .replace("<p>","")
-                    .replace("</p>","")
-                    .replace("&nbsp;","")
-                    .replace("    ","")
-                    .substringAfter("\n")
-                    .substringBeforeLast("\n")
-
-                var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c")
-                if (volume.toDouble() < 10) {
-                    volume = "00$volume"
-                }
-                else if(volume.toDouble() < 100) {
-                    volume = "0$volume"
-                }
-
-                var chapter = nextChapterFromHTML.substringAfterLast("/c")
-                if (chapter.toDouble() < 10) {
-                    chapter = "00$chapter"
-                }
-                else if(chapter.toDouble() < 100) {
-                    chapter = "0$chapter"
-                }
-                val appFolder = File(Environment.getExternalStorageDirectory(), appFolderName)
-                val anotherFolder = File(appFolder, chFolderName)
-                val readerChData = File(anotherFolder, "$volume$chapter.txt")
-                val writerChData = FileWriter(readerChData)
-                writerChData.append("$getText")
-                writerChData.flush()
-                writerChData.close()
-
-                for (line in html.lines()) {
-                    // this downloading process works twice, because of my crab hands...
-                    // somehow one or couple chapters doesn't downloads if this operation goes once
-                    if(line.contains("Последняя глава прочитана") && isSecondParse) {
-                        chaptersAmount = anotherFolder.listFiles().size
-                        doesLastChapterDownloaded = true
-                        isDownloading = false
-                        return
-                    }
-                    else if(line.contains("Последняя глава прочитана") && !isSecondParse) {
-                        isSecondParse = true
-                        nextChapterFromHTML = "$url"
-                    }
-                    //
-                    if(line.contains("Следующая глава"))
-                        nextChapterFromHTML = line
-                    //
-                }
-                nextChapterFromHTML = nextChapterFromHTML
-                    .substringAfter("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
-                    .substringBefore("\" tabindex=\"-1\"> <span>Следующая глава</span>")
-                    .substringBefore("?bid")
-            } catch (e: Exception) {
-                Log.i("ERRORRRR", "$e")
-                isDownloading = false
-                parsingError = true
-                return
+    // checks current scroll position /-> needed only on starting application when paragraphs are still loading to buffer
+    fun CheckScrollPos(scope: CoroutineScope) {
+        var job = scope.launch {
+            delay(600)
+            if (scrollBar.scrollY != scrollPos) {
+                coolToast("Глава ещё прогружается, пожалуйста подождите...")
             }
         }
-        //
-    }
-    
-    // restarts app, when needed
-    private fun RestartApp(context : Context) {
-        val packageManager = context.packageManager
-        val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-        val componentName = intent?.component
-        val mainIntent = Intent.makeRestartActivityTask(componentName)
-        context.startActivity(mainIntent)
-        Runtime.getRuntime().exit(0)
-    }
-    //
-    
-    // notification, that might be closed
-    @SuppressLint("MissingPermission")
-    private fun ShowNotification(title: String, text: String) {
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.notification_icon)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setAutoCancel(true)
-            .setColor(Color.TRANSPARENT)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setStyle(NotificationCompat.BigTextStyle())
-
-        with(NotificationManagerCompat.from(this)) {
-            notify(NOTIFICATION_ID, builder.build())
-        }
-    }
-    //
-    
-    // notification, that can't be closed
-    @SuppressLint("MissingPermission")
-    private fun ShowImmortalNotification(title: String, text: String) {
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.notification_icon)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setAutoCancel(true)
-            .setOngoing(true)
-            .setColor(Color.TRANSPARENT)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setStyle(NotificationCompat.BigTextStyle())
-
-        with(NotificationManagerCompat.from(this)) {
-            notify(NOTIFICATION_ID, builder.build())
-        }
-    }
-    //
-
-    // notification channel (since oreo did)
-    private fun CreateNotificationChannel() {
-        val name = "Quack!"
-        val descriptionText = "Показывает статус загрузки глав, не более"
-        val importance = NotificationManager.IMPORTANCE_DEFAULT
-        val channel = NotificationChannel(CHANNEL_ID, name, importance)
-        channel.description = descriptionText
-        // Register the channel with the system
-        val notificationManager: NotificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
     }
     //
 }

@@ -12,8 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="top"
-        >
+        android:gravity="top">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -37,9 +36,7 @@
                     android:paddingRight="15dp"
                     />
             </HorizontalScrollView>
-
         </LinearLayout>
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -100,33 +97,163 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="gone">
     </RelativeLayout>
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:orientation="vertical">
+            <LinearLayout
+                android:id="@+id/_picture_gallery_scroll_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+                <HorizontalScrollView
+                    android:id="@+id/_picture_gallery_scroll_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:scrollbarSize="0dp"
+                    android:gravity="center">
+                    <LinearLayout
+                        android:id="@+id/_picture_gallery_scroll_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+                    </LinearLayout>
+                </HorizontalScrollView>
+                <ImageView
+                    android:id="@+id/_picture_gallery_helping_arrow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:padding="20dp"
+                    android:alpha="1"
+                    android:src="@drawable/helping_arrow"/>
+            </LinearLayout>
             <ScrollView
                 android:id="@+id/_scrollBar"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scrollbarSize="5dp"
-                android:scrollbarThumbVertical="@drawable/scrollbar"
-                android:layout_centerVertical="true"
-                android:layout_centerHorizontal="true">
+                android:layout_height="wrap_content"
+                android:scrollbarSize="0dp"
+                android:scrollbarThumbVertical="@drawable/scrollbar">
                 <LinearLayout
-                    android:id="@+id/_scrollContainer"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:gravity="left">
+                    android:orientation="vertical">
+                    <LinearLayout
+                        android:id="@+id/_picture_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/_scrollContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                    </LinearLayout>
                 </LinearLayout>
             </ScrollView>
         </LinearLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/_customScrollBar">
+            <LinearLayout
+                android:id="@+id/_customScrollBarRed"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_gravity="right"
+                android:padding="5dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:padding="2dp"
+                    android:background="@drawable/red_bar"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/_customScrollBarYellow"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_gravity="right"
+                android:padding="5dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:padding="2dp"
+                    android:background="@drawable/yellow_bar"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/_customScrollBarBlue"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_gravity="right"
+                android:padding="5dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:padding="2dp"
+                    android:background="@drawable/blue_bar"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/_customScrollBarCyan"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_gravity="right"
+                android:padding="5dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:padding="2dp"
+                    android:background="@drawable/cyan_bar"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/_customScrollBarWhite"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:layout_gravity="right"
+                android:gravity="center_horizontal"
+                android:padding="5dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:padding="2dp"
+                    android:background="@drawable/scrollbar"
+                    />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/_customScrollBarText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:text="quack"
+                android:textColor="@color/_textColor"
+                android:textSize="10dp" />
+        </FrameLayout>
+
+
         <LinearLayout
             android:id="@+id/_chapterShownUI"
             android:layout_width="match_parent"
@@ -170,18 +297,28 @@
                         android:id="@+id/_chapterScrollBar"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
-                        android:layout_centerVertical="true"
-                        android:layout_alignParentLeft="true"
                         android:layout_weight = "1"
                         android:scrollbarSize="0dp">
                         <LinearLayout
                             android:id="@+id/_chapterScrollContainer"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="match_parent"
                             android:gravity="center"
                             android:orientation="horizontal">
                         </LinearLayout>
                     </HorizontalScrollView>
+                    <TextView
+                        android:id="@+id/_chapter_UI_num_tome"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="center"
+                        android:text=">.>"
+                        android:fontFamily="@font/roboto_slab_regular"
+                        android:textColor="@color/_sideColor"
+                        android:textSize="16dp"
+                        android:visibility="gone"/>
+/>
                     <ImageView
                         android:id="@+id/_toCurrentChapter"
                         android:layout_width="wrap_content"
@@ -198,11 +335,12 @@
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="500dp"
-                android:background="@color/_deepSpaceColor">
+                android:background="@color/_spaceColor">
                 <ScrollView
                     android:id="@+id/_chapterUIscrollBar"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent">
+                    android:layout_height="match_parent"
+                    android:scrollbarSize="0dp">
                     <LinearLayout
                         android:id="@+id/_chapterUIscrollContainer"
                         android:layout_width="match_parent"

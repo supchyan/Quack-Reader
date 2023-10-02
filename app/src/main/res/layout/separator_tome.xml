@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:gravity="center">
+    android:gravity="center"
+    android:id="@+id/_tome_chUI_container">
     <TextView
         android:id="@+id/_tome_chUI_text"
         android:layout_width="match_parent"
