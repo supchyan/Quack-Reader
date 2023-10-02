@@ -17,7 +17,11 @@
 3. Не работает ряд разрешений на Android 11+, что делает невозможным использование приложения на версиях Android выше 10
 4. Некоторые кнопки навигации неактивны
 <br /><br />
-![preview](https://github.com/supchyan/QuackReader/assets/123704468/f53e3ba5-0188-4b01-a40f-7c2f6143b094)
+![image](https://github.com/supchyan/QuackReader/assets/123704468/e6111973-e9b0-4b53-a3fd-ca7bd86cb4e3)
+<br /><br />
+![image](https://github.com/supchyan/QuackReader/assets/123704468/05d0f02a-c3f4-4911-a000-29add3406360)
+<br /><br />
+![image](https://github.com/supchyan/QuackReader/assets/123704468/b94ab20e-b4b0-4679-82eb-a7249dbfaabc)
 <br /><br />
 Пока что выведу гайд по навигации в приложении сюда, который я скрыл из билда(за шакалов простите, как есть xd):
 <br /><br />
