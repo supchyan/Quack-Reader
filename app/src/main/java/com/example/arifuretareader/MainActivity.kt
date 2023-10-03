@@ -13,6 +13,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.PorterDuff
+import android.graphics.Rect
 import android.media.MediaScannerConnection
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -24,7 +25,6 @@ import android.os.Handler
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.Settings
-import android.util.DisplayMetrics
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
     lateinit var chapterUIscrollContainer: LinearLayout
     lateinit var chapterUIscrollBlock: LinearLayout
 
+    lateinit var ranobeNameContainer: LinearLayout
     lateinit var ranobeName: TextView
     var ranobeTitle = ""
 
@@ -138,6 +139,7 @@ class MainActivity : ComponentActivity() {
     var chUIscrollPos = 0
     var selectedChH = 0
     // locals that moved to globals for some reasons
+    var c = 1
     var of = 0
     var oldScr = 0
     var oldOf = 0
@@ -198,6 +200,7 @@ class MainActivity : ComponentActivity() {
         header = findViewById(R.id._header)
         centeredBlock = findViewById(R.id._centered_block)
         ranobeName = findViewById(R.id._ranobeName)
+        ranobeNameContainer = findViewById(R.id._ranobeNameContainer)
         chapterShownUI = findViewById(R.id._chapterShownUI)
         picContainer = findViewById(R.id._picture_container)
         picGalleryScrollLayout = findViewById(R.id._picture_gallery_scroll_layout)
@@ -365,13 +368,6 @@ class MainActivity : ComponentActivity() {
         // 'next chapter' button activity on click
         nextBtn.setOnClickListener {
 
-            customScrBbuffer.cancel()
-            paragraphBuffer.cancel()
-            picBuffer.cancel()
-            
-            chJob.cancel()
-            chUIjob.cancel()
-
             if (chIndex == chNumArr.lastIndex || chIndex == chNumArr.lastIndex) {
                 val animator = ValueAnimator.ofFloat(0f, -20f, 0f).apply {
                     addUpdateListener { animation ->
@@ -380,9 +376,15 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast(R.drawable.duck_customizer,"Там ничего нет")
+                coolToast(R.drawable.duck_customizer,"Это была последняя глава")
                 return@setOnClickListener
             }
+
+            customScrBbuffer.cancel()
+            paragraphBuffer.cancel()
+            picBuffer.cancel()
+            chJob.cancel()
+            chUIjob.cancel()
 
             chIndex += 1
 
@@ -409,12 +411,6 @@ class MainActivity : ComponentActivity() {
         // 'previous chapter' button activity on click
         backBtn.setOnClickListener {
 
-            customScrBbuffer.cancel()
-            paragraphBuffer.cancel()
-            picBuffer.cancel()
-            chJob.cancel()
-            chUIjob.cancel()
-
             if (chIndex == 0) {
                 val animator = ValueAnimator.ofFloat(0f, 20f, 0f).apply {
                     addUpdateListener { animation ->
@@ -423,9 +419,15 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast(R.drawable.duck_customizer,"Там ничего нет")
+                coolToast(R.drawable.duck_customizer,"Это первая глава")
                 return@setOnClickListener
             }
+
+            customScrBbuffer.cancel()
+            paragraphBuffer.cancel()
+            picBuffer.cancel()
+            chJob.cancel()
+            chUIjob.cancel()
 
             chIndex -= 1
 
@@ -494,6 +496,7 @@ class MainActivity : ComponentActivity() {
 
         // novel name
         ranobeName.text = ranobeTitle
+        ranobeNameContainer.gravity = Gravity.CENTER
         //
 
         paragraphCount = chText.lastIndex
@@ -548,13 +551,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     else {
-
-                        val displayMetrics = DisplayMetrics()
-                        windowManager.defaultDisplay.getMetrics(displayMetrics)
                         img.setPadding(
-                            (displayMetrics.widthPixels - getViewWidth(img))/2,
+                            (resources.displayMetrics.widthPixels - getViewWidth(img))/2,
                             0,
-                            (displayMetrics.widthPixels - getViewWidth(img))/2,
+                            (resources.displayMetrics.widthPixels - getViewWidth(img))/2,
                             0
                         )
                     }
@@ -652,28 +652,6 @@ class MainActivity : ComponentActivity() {
         // block to create UI with chapter's images
         // ...
         //
-
-        customScrBbuffer = scope.launch {
-            while (true) {
-
-                val offset = dpToFloat(860) * ((scrollBar.scrollY / (getViewHeight(scrollContainer).toFloat() - 10*dpToFloat(60))))
-                val maxOffset = dpToFloat(860) * ((scrollBar.bottom / (getViewHeight(scrollContainer).toFloat() - 10*dpToFloat(60))))
-
-                customScrollBarRed.translationY = offset * 0.99f
-                customScrollBarYellow.translationY = offset * 0.995f
-                customScrollBarBlue.translationY = offset * 1.01f
-                customScrollBarCyan.translationY = offset * 1.005f
-                customScrollBarWhite.translationY = offset
-
-                customScrollBarText.translationY = dpToFloat(50) + offset
-                customScrollBarText.translationX = dpToFloat(8)
-                customScrollBarText.pivotX = getViewWidth(customScrollBarText) / 2f
-                customScrollBarText.pivotY = getViewHeight(customScrollBarText) / 2f
-                customScrollBarText.rotation = 90f
-
-                delay(1)
-            }
-        }
 
         paragraphBuffer = scope.launch {
             var posOff = 0
@@ -850,6 +828,40 @@ class MainActivity : ComponentActivity() {
                         toBmBtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.less_bouncing))
                     }
                 }
+                delay(1)
+            }
+        }
+
+        customScrBbuffer = scope.launch {
+
+            var lerp = 0f
+
+            while (true) {
+
+                val sbH = scrollBar.bottom.toFloat()
+                val scP = scrollContainer.bottom.toFloat() - scrollBar.scrollY.toFloat()
+                val oldScP = scrollContainer.bottom.toFloat()
+                val min = 0f
+                val max = 1f
+
+                if(oldScP - sbH != 0f) lerp = ((scP - sbH) / (oldScP - sbH)) * (min - max) + max
+
+                val offset = (scrollBar.bottom.toFloat() - getViewHeight(customScrollBarWhite)) * lerp
+
+                Log.i("scroll#prefs","top: ${lerp}")
+
+                customScrollBarRed.translationY = offset * 0.995f
+                customScrollBarYellow.translationY = offset * 0.997f
+                customScrollBarBlue.translationY = offset * 1.006f
+                customScrollBarCyan.translationY = offset * 1.003f
+                customScrollBarWhite.translationY = offset
+
+                customScrollBarText.translationY = dpToFloat(50) + offset
+                customScrollBarText.translationX = dpToFloat(8)
+                customScrollBarText.pivotX = getViewWidth(customScrollBarText) / 2f
+                customScrollBarText.pivotY = getViewHeight(customScrollBarText) / 2f
+                customScrollBarText.rotation = 90f
+
                 delay(1)
             }
         }
@@ -1317,6 +1329,9 @@ class MainActivity : ComponentActivity() {
         urlSearch.setOnKeyListener(object : View.OnKeyListener {
             @SuppressLint("RestrictedApi")
             override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
+
+
+
                 when (keyCode) {
                     KeyEvent.KEYCODE_ENTER -> {
                         if(!isDownloading) {
@@ -1327,13 +1342,16 @@ class MainActivity : ComponentActivity() {
                                     if(wrongInputURL) {
 
                                         RedImpulse(urlSearch, ranobeInput)
-
-                                        if(errPressCount > 0) coolToast(R.drawable.duck_customizer,"Неправильная ссылка")
-                                        else if (errPressCount > -15) coolToast(R.drawable.duck_customizer,"Если возникли трудности с загрузкой глав, посетите GitHub проекта")
-                                        else coolToast(R.drawable.duck_customizer,"Классная анимация, мне тоже нравится")
-
-                                        errPressCount--
-
+                                        when (c) {
+                                            1 -> {
+                                                coolToast(R.drawable.duck_customizer,"Приложение поддерживает только ссылки с ranobelib.me.")
+                                                c = 2
+                                            }
+                                            2 -> {
+                                                coolToast(R.drawable.duck_customizer,"Для дополнительной информации посетите Github.")
+                                                c = 1
+                                            }
+                                        }
                                         wrongInputURL = false
                                     }
                                     if(successConnect) {
@@ -1783,15 +1801,21 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     fun DownloadRanobe(url: String) {
 
+        var finurl = url
         // checking state of availability url address
         try {
+            finurl = if(!finurl.contains("https://")) {
+                "https://$url"
+            } else url
             isDownloading = true
+            inputURL = URL(finurl)
 
-            inputURL = URL(url)
-            successConnect = true
-
+            if(!finurl.contains("ranobelib.me")) {
+                wrongInputURL = true
+                isDownloading = false
+                return
+            } else successConnect = true
         } catch (e: Exception) {
-
             wrongInputURL = true
             isDownloading = false
             return
@@ -1799,7 +1823,7 @@ class MainActivity : ComponentActivity() {
         //
 
         // this block it's start point of parser. here program tries to find сhapters
-        nextChapterFromHTML = "$url"
+        nextChapterFromHTML = "$finurl"
             .substringBeforeLast("?ui")
             .substringBeforeLast("&ui")
             .substringBeforeLast("?page")
@@ -1833,7 +1857,7 @@ class MainActivity : ComponentActivity() {
                     )
                     val anotherFolder = File(appFolder, chFolderName)
 
-//                    Log.i("TEXT", "${nextChapterFromHTML}")
+                    Log.i("TEXT", "${nextChapterFromHTML}")
 
                     val doc = Jsoup.connect(nextChapterFromHTML).userAgent("Mozilla").get()
                     val html = doc.outerHtml()
@@ -1892,8 +1916,8 @@ class MainActivity : ComponentActivity() {
                                 .substringAfter("<img class=\"lazyload\" data-background=\"\" data-src=\"")
                                 .substringBefore("\">")
 //                            Log.i("PICTURE", "$picture")
-                            val url = URL(picture)
-                            val image = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                            val picurl = URL(picture)
+                            val image = BitmapFactory.decodeStream(picurl.openConnection().getInputStream())
                             SaveImage("$volume$chapter", "${picture.substringAfterLast("/").substringBeforeLast(".jpg").substringBeforeLast(".png")}", image)
                         }
                         else {
@@ -1915,7 +1939,7 @@ class MainActivity : ComponentActivity() {
                             return
                         }
                         else if (line.contains("Последняя глава прочитана") && !isSecondParse) {
-                            nextChapterFromHTML = "$url"
+                            nextChapterFromHTML = "$finurl"
                                 .substringBeforeLast("?ui")
                                 .substringBeforeLast("&ui")
                                 .substringBeforeLast("?page")

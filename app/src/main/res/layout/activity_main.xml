@@ -14,16 +14,18 @@
         android:orientation="vertical"
         android:gravity="top">
         <LinearLayout
+            android:id="@+id/_ranobeNameContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center">
             <HorizontalScrollView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:scrollbarSize="0dp">
                 <TextView
                     android:id="@+id/_ranobeName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textStyle="bold"
                     android:textAlignment="gravity"
@@ -143,7 +145,8 @@
             <ScrollView
                 android:id="@+id/_scrollBar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
                 android:scrollbarSize="0dp"
                 android:scrollbarThumbVertical="@drawable/scrollbar">
                 <LinearLayout
@@ -169,80 +172,86 @@
         </LinearLayout>
 
         <FrameLayout
+            android:id="@+id/_customScrollBar"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:id="@+id/_customScrollBar">
+            android:layout_height="match_parent">
+
             <LinearLayout
                 android:id="@+id/_customScrollBarRed"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
                 android:layout_gravity="right"
+                android:orientation="horizontal"
                 android:padding="5dp">
+
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="30dp"
-                    android:padding="2dp"
                     android:background="@drawable/red_bar"
-                    />
+                    android:padding="2dp" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/_customScrollBarYellow"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
                 android:layout_gravity="right"
+                android:orientation="horizontal"
                 android:padding="5dp">
+
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="30dp"
-                    android:padding="2dp"
                     android:background="@drawable/yellow_bar"
-                    />
+                    android:padding="2dp" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/_customScrollBarBlue"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
                 android:layout_gravity="right"
+                android:orientation="horizontal"
                 android:padding="5dp">
+
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="30dp"
-                    android:padding="2dp"
                     android:background="@drawable/blue_bar"
-                    />
+                    android:padding="2dp" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/_customScrollBarCyan"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
                 android:layout_gravity="right"
+                android:orientation="horizontal"
                 android:padding="5dp">
+
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="30dp"
-                    android:padding="2dp"
                     android:background="@drawable/cyan_bar"
-                    />
+                    android:padding="2dp" />
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/_customScrollBarWhite"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
                 android:layout_gravity="right"
                 android:gravity="center_horizontal"
+                android:orientation="vertical"
                 android:padding="5dp">
+
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="30dp"
-                    android:padding="2dp"
                     android:background="@drawable/scrollbar"
-                    />
+                    android:padding="2dp" />
             </LinearLayout>
+
             <TextView
                 android:id="@+id/_customScrollBarText"
                 android:layout_width="wrap_content"
