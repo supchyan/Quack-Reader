@@ -1,4 +1,7 @@
-# Quack Reader
+<div align="center">
+  <img  src="https://github.com/supchyan/QuackReader/assets/123704468/28b918ca-0f3c-4164-b6f9-02b0f8505a6a" alt="cover" />
+  <p> <strong>Quack Re.</strong> </p>
+</div>
 
 ## Описание:
 Приложение, позволяющее читать ранобэ и новеллы с сайта ranobelib.me в оффлайне с удобным интерфейсом.
@@ -20,14 +23,11 @@
 6. Данные хранятся не в json, а в txt (не в приоритете);
 7. Не у всех кнопок в интерфейсе есть действие при нажатии на них (не в приоритете);
 8. "Топорность" интерфейса из-за неправильной компановки тегов (не в приоритете)
-<br /><br />
-![image](https://github.com/supchyan/QuackReader/assets/123704468/e6111973-e9b0-4b53-a3fd-ca7bd86cb4e3)
-<br /><br />
-![image](https://github.com/supchyan/QuackReader/assets/123704468/05d0f02a-c3f4-4911-a000-29add3406360)
-<br /><br />
-![image](https://github.com/supchyan/QuackReader/assets/123704468/b94ab20e-b4b0-4679-82eb-a7249dbfaabc)
-<br /><br />
-Пока что выведу гайд по навигации в приложении сюда, который я скрыл из билда(за шакалов простите, как есть xd):
-<br /><br />
-![image](https://github.com/supchyan/QuackReader/assets/123704468/1dd2679a-efce-4726-b636-e0a03ad977c7)
+
+## Скриншоты:
+<div align="center">
+  <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/e6111973-e9b0-4b53-a3fd-ca7bd86cb4e3" alt="cover" />
+  <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/05d0f02a-c3f4-4911-a000-29add3406360" alt="cover" />
+  <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/b94ab20e-b4b0-4679-82eb-a7249dbfaabc" alt="cover" />
+</div>
 
