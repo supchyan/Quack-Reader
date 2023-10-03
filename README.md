@@ -1,3 +1,4 @@
+</br>
 <div align="center">
   <img  src="https://github.com/supchyan/QuackReader/assets/123704468/28b918ca-0f3c-4164-b6f9-02b0f8505a6a" alt="cover" />
   <p> <strong>Quack Re.</strong> </p>
