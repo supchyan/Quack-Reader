@@ -176,7 +176,9 @@ class MainActivity : ComponentActivity() {
 
     var picFolderName = ".Pictures"
 
-    val PERMISSION_CODE = 100
+    val STORAGE_PERMISSION_CODE = 100
+    val INTERNET_PERMISSION_CODE = 101
+    val NOTIFICATIONS_PERMISSION_CODE = 102
 
     companion object {
         const val NOTIFICATION_ID = 101
@@ -228,6 +230,8 @@ class MainActivity : ComponentActivity() {
         //
 
         CreateNotificationChannel()
+
+        CheckPermission()
 
         if (!CheckPermission()) {
             AllowPermissionBlock()
@@ -309,7 +313,7 @@ class MainActivity : ComponentActivity() {
             delPressCount--
 
             if (delPressCount != 0) {
-                coolToast("Нажмите ещё $delPressCount раз, чтобы удалить все главы")
+                coolToast(R.drawable.trash,"Нажмите ещё $delPressCount раз, чтобы удалить все главы")
             } else {
 
                 delPressCount = 5
@@ -326,21 +330,21 @@ class MainActivity : ComponentActivity() {
 
                 ranobeTitle = ""
 
-                coolToast("Удаление успешно")
+                coolToast(R.drawable.duck_customizer,"Удаление успешно")
             }
         }
         //
         // 'back to done content' button activity on click
         toBmBtn.setOnClickListener {
-
-            toBmBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_to_180))
+            toBmBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_like_rotor))
             scrollBar.smoothScrollTo(0, scrollPos)
             chapterScrollBar.smoothScrollTo(chScrollPos, 0)
-            chapterUIscrollBar.smoothScrollTo(0, chUIscrollPos)
-            if (scrollBar.scrollY == scrollPos &&
-                chapterScrollBar.scrollX == chScrollPos &&
-                chapterUIscrollBar.scrollY == chUIscrollPos)
-                    coolToast("В прошлый раз вы остановились в этом месте")
+            if(isChUIshown) {
+                chapterUIscrollBar.smoothScrollTo(0, chUIscrollPos)
+            }
+            if (scrollBar.scrollY == scrollPos && chapterScrollBar.scrollX == chScrollPos) {
+                coolToast(R.drawable.tobookmark,"В прошлый раз вы остановились в этом месте")
+            }
             else CheckScrollPos(lifecycleScope)
         }
         //
@@ -376,7 +380,7 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast("Там ничего нет")
+                coolToast(R.drawable.duck_customizer,"Там ничего нет")
                 return@setOnClickListener
             }
 
@@ -419,7 +423,7 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast("Там ничего нет")
+                coolToast(R.drawable.duck_customizer,"Там ничего нет")
                 return@setOnClickListener
             }
 
@@ -1324,9 +1328,9 @@ class MainActivity : ComponentActivity() {
 
                                         RedImpulse(urlSearch, ranobeInput)
 
-                                        if(errPressCount > 0) coolToast("Неправильная ссылка")
-                                        else if (errPressCount > -15) coolToast("Если возникли трудности с загрузкой глав, посетите GitHub проекта")
-                                        else coolToast("Классная анимация, мне тоже нравится")
+                                        if(errPressCount > 0) coolToast(R.drawable.duck_customizer,"Неправильная ссылка")
+                                        else if (errPressCount > -15) coolToast(R.drawable.duck_customizer,"Если возникли трудности с загрузкой глав, посетите GitHub проекта")
+                                        else coolToast(R.drawable.duck_customizer,"Классная анимация, мне тоже нравится")
 
                                         errPressCount--
 
@@ -1397,7 +1401,7 @@ class MainActivity : ComponentActivity() {
                             }.start()
                         }
                         else {
-                            coolToast("Скачивание уже началось, ожидайте")
+                            coolToast(R.drawable.duck_customizer,"Скачивание уже началось, ожидайте")
                         }
                     }
                     else -> return false
@@ -1549,7 +1553,7 @@ class MainActivity : ComponentActivity() {
 
             SaveData()
 
-            coolToast("Ошибка: B0M1DU6K")
+            coolToast(R.drawable.duck_customizer,"Ошибка: B0M1DU6K")
         }
     }
     //
@@ -1586,7 +1590,7 @@ class MainActivity : ComponentActivity() {
 
             SaveData()
 
-            coolToast("Ошибка: CH3RDU6K")
+            coolToast(R.drawable.duck_customizer,"Ошибка: CH3RDU6K")
         }
 
         // number of array equals selected chapter
@@ -1595,7 +1599,7 @@ class MainActivity : ComponentActivity() {
 
         // if some loaded 'chapter name' from 'chapter's array' is no longer available, returns fun with an error
         if (!File("$appFolder/${chFolderName}/$chName").exists()) {
-            coolToast("Ошибка: N0DU6K")
+            coolToast(R.drawable.duck_customizer, "Ошибка: N0DU6K")
             return
         }
         //
@@ -1730,7 +1734,7 @@ class MainActivity : ComponentActivity() {
             Environment.isExternalStorageManager()
         } else {
             //Android is below 11(R)
-            val notificatioins = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            val note = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             val internet = ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET)
             val write = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -1738,7 +1742,12 @@ class MainActivity : ComponentActivity() {
             val read = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.READ_EXTERNAL_STORAGE
             )
-            notificatioins == PackageManager.PERMISSION_GRANTED && internet == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED
+            return (
+                note == PackageManager.PERMISSION_GRANTED &&
+                internet == PackageManager.PERMISSION_GRANTED &&
+                write == PackageManager.PERMISSION_GRANTED &&
+                read == PackageManager.PERMISSION_GRANTED
+            )
         }
     }
     //
@@ -1824,11 +1833,10 @@ class MainActivity : ComponentActivity() {
                     )
                     val anotherFolder = File(appFolder, chFolderName)
 
-                    Log.i("TEXT", "${nextChapterFromHTML}")
+//                    Log.i("TEXT", "${nextChapterFromHTML}")
 
                     val doc = Jsoup.connect(nextChapterFromHTML).userAgent("Mozilla").get()
                     val html = doc.outerHtml()
-
                     var getText = ""
 
                     if (html.contains("reader-header-action__text text-truncate")) {
@@ -1851,7 +1859,11 @@ class MainActivity : ComponentActivity() {
                         .substringAfter("\n")
                         .substringBeforeLast("\n")
 
-                    var volume = nextChapterFromHTML.substringAfterLast("v").substringBeforeLast("/c").substringBefore(".0")
+                    var volume = nextChapterFromHTML
+                        .substringAfterLast("/v")
+                        .substringBeforeLast("/c")
+                        .substringBefore(".0")
+
                     if (volume.toDouble() < 10) {
                         volume = "00$volume"
                     }
@@ -1859,7 +1871,11 @@ class MainActivity : ComponentActivity() {
                         volume = "0$volume"
                     }
 
-                    var chapter = nextChapterFromHTML.substringAfterLast("/c").substringBefore(".0")
+                    var chapter = nextChapterFromHTML
+                        .substringAfterLast("/c")
+                        .substringBefore(".0")
+                        .substringBefore("?bid")
+
                     if (chapter.toDouble() < 10) {
                         chapter = "00$chapter"
                     }
@@ -1868,16 +1884,20 @@ class MainActivity : ComponentActivity() {
                     }
 
                     for (line in html.lines()) {
+
                         if(line.contains("<img class=\"lazyload\"")) {
                             val picture = line
                                 .substringAfter("<div class=\"reader-container container container_center\">")
                                 .substringBefore("</div> <!-- --> <!-- -->")
                                 .substringAfter("<img class=\"lazyload\" data-background=\"\" data-src=\"")
                                 .substringBefore("\">")
-                            Log.i("PICTURE", "$picture")
+//                            Log.i("PICTURE", "$picture")
                             val url = URL(picture)
                             val image = BitmapFactory.decodeStream(url.openConnection().getInputStream())
                             SaveImage("$volume$chapter", "${picture.substringAfterLast("/").substringBeforeLast(".jpg").substringBeforeLast(".png")}", image)
+                        }
+                        else {
+                            Log.i("0", "0")
                         }
 
                         val readerChData = File(anotherFolder, "$volume$chapter.txt")
@@ -1902,20 +1922,19 @@ class MainActivity : ComponentActivity() {
                             isSecondParse = true
                         }
                         //
-                        if(line.contains("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")) {
+                        if(line.contains("class=\"reader-next__btn button text-truncate button_label button_label_right\"")) {
                             nextChapterFromHTML = line
-                                .substringAfterLast("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
-                                .substringBefore("\" tabindex=\"-1\">")
                                 .substringAfterLast("<a class=\"reader-next__btn button text-truncate button_label button_label_right\" href=\"")
                                 .substringBefore("\" tabindex=\"-1\">")
                                 .substringBeforeLast("?ui")
                                 .substringBeforeLast("&ui")
                                 .substringBeforeLast("?page")
                         }
+                        else {
+                            Log.i("0", "0")
+                        }
                         //
                     }
-
-                    Log.i("LINK","${nextChapterFromHTML}")
                 } catch (e: Exception) {
 
                 }
@@ -1948,8 +1967,7 @@ class MainActivity : ComponentActivity() {
             // Tell the media scanner about the new file so that it is
             // immediately available to the user.
             MediaScannerConnection.scanFile(applicationContext, arrayOf<String>(imageFile.absolutePath), null) { path, uri ->
-                Log.i("ExternalStorage", "Scanned $path:")
-                Log.i("ExternalStorage", "-> uri=$uri")
+
             }
         } catch (e: java.lang.Exception) {
             throw IOException()
@@ -1977,6 +1995,14 @@ class MainActivity : ComponentActivity() {
                 val uri = Uri.fromParts("package", this.packageName, null)
                 intent.data = uri
                 storageActivityResultLauncher.launch(intent)
+
+                if (Build.VERSION.SDK_INT > 32) {
+                    ActivityCompat.requestPermissions(
+                        this, arrayOf<String>(Manifest.permission.POST_NOTIFICATIONS),
+                        NOTIFICATIONS_PERMISSION_CODE
+                    )
+                }
+
             } catch (e: Exception) {
                 val intent = Intent()
                 intent.action = Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
@@ -1987,11 +2013,24 @@ class MainActivity : ComponentActivity() {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(
-                    Manifest.permission.INTERNET,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.READ_EXTERNAL_STORAGE
                 ),
-                PERMISSION_CODE
+                STORAGE_PERMISSION_CODE
+            )
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.INTERNET
+                ),
+                INTERNET_PERMISSION_CODE
+            )
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.POST_NOTIFICATIONS
+                ),
+                NOTIFICATIONS_PERMISSION_CODE
             )
         }
     }
@@ -2017,13 +2056,34 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("RestrictedApi")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_CODE) {
+        if (requestCode == STORAGE_PERMISSION_CODE) {
             if (grantResults.isNotEmpty()) {
                 //check each permission if granted or not
                 val write = grantResults[0] == PackageManager.PERMISSION_GRANTED
                 val read = grantResults[1] == PackageManager.PERMISSION_GRANTED
+                if (write && read) {
+                    //External Storage Permission granted
+                } else {
+                    //External Storage Permission denied...
+                }
+            }
+        }
+        if (requestCode == INTERNET_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty()) {
+                //check each permission if granted or not
                 val internet = grantResults[2] == PackageManager.PERMISSION_GRANTED
-                if (write && read && internet) {
+                if (internet) {
+                    //External Storage Permission granted
+                } else {
+                    //External Storage Permission denied...
+                }
+            }
+        }
+        if (requestCode == NOTIFICATIONS_PERMISSION_CODE) {
+            if (grantResults.isNotEmpty()) {
+                //check each permission if granted or not
+                val note = grantResults[3] == PackageManager.PERMISSION_GRANTED
+                if (note) {
                     //External Storage Permission granted
                 } else {
                     //External Storage Permission denied...
@@ -2040,10 +2100,13 @@ class MainActivity : ComponentActivity() {
     //
 
     // generates toast message on call
-    fun coolToast(text: String) {
+    fun coolToast(icon: Int, text: String) {
         var toast = Toast.makeText(applicationContext, " ", Toast.LENGTH_SHORT)
         var toastView = layoutInflater.inflate(R.layout.duck_toast, null)
         var toastTextId = toastView.findViewById<TextView>(R.id._toast_text)
+        var toastPicId = toastView.findViewById<ImageView>(R.id._toast_pic)
+        toastView.animation = AnimationUtils.loadAnimation(applicationContext, R.anim.rotate_like_rotor)
+        toastPicId.setImageResource(icon)
         toastTextId.text = text
         toast.view = toastView
         toast.show()
@@ -2083,7 +2146,7 @@ class MainActivity : ComponentActivity() {
         var job = scope.launch {
             delay(600)
             if (scrollBar.scrollY != scrollPos) {
-                coolToast("Глава ещё прогружается, пожалуйста подождите...")
+                coolToast(R.drawable.tobookmark,"Глава ещё прогружается, пожалуйста подождите...")
             }
         }
     }
