@@ -69,6 +69,7 @@ import java.net.URL
 
 class MainActivity : ComponentActivity() {
 
+    lateinit var toastContainer: LinearLayout
     lateinit var parent: LinearLayout
     lateinit var header: LinearLayout
 
@@ -202,6 +203,7 @@ class MainActivity : ComponentActivity() {
         //
 
         // searching for main blocks and containers ids
+        toastContainer = findViewById(R.id._toastContainer)
         parent = findViewById(R.id._parent)
         header = findViewById(R.id._header)
         centeredBlock = findViewById(R.id._centered_block)
@@ -316,6 +318,7 @@ class MainActivity : ComponentActivity() {
                     R.anim.rotate_like_rotor
                 )
             )
+            coolToast(R.drawable.open_gallery, "Данная кнопка позволяет настроить тему закладке, но пока что тут ничего нет.", 10000)
         }
         //
         // 'delete ranobe chapters' button activity on click
@@ -356,7 +359,7 @@ class MainActivity : ComponentActivity() {
                 chapterUIscrollBar.smoothScrollTo(0, chUIscrollPos)
             }
             if (scrollBar.scrollY == scrollPos && chapterScrollBar.scrollX == chScrollPos) {
-                coolToast(R.drawable.tobookmark,"В прошлый раз вы остановились в этом месте")
+                coolToast(R.drawable.tobookmark,"В прошлый раз вы остановились в этом месте.")
             }
             else CheckScrollPos(lifecycleScope)
         }
@@ -373,6 +376,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 swapThemeBtn.setImageDrawable(getDrawable(R.drawable.light_theme))
             }
+
+                coolToast(R.drawable.dark_theme, "В данный момент сменить тему нельзя.")
         }
         //
         // 'next chapter' button activity on click
@@ -386,7 +391,7 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast(R.drawable.duck_customizer,"Это была последняя глава")
+                coolToast(R.drawable.duck_customizer,"Вы находитесь на последней главе.")
                 return@setOnClickListener
             }
 
@@ -429,7 +434,7 @@ class MainActivity : ComponentActivity() {
                     duration = 250
                     start()
                 }
-                coolToast(R.drawable.duck_customizer,"Это первая глава")
+                coolToast(R.drawable.duck_customizer,"Вы находитесь на первой главе.")
                 return@setOnClickListener
             }
 
@@ -2179,16 +2184,43 @@ class MainActivity : ComponentActivity() {
     //
 
     // generates toast message on call
-    fun coolToast(icon: Int, text: String) {
-        var toast = Toast.makeText(applicationContext, " ", Toast.LENGTH_SHORT)
+    fun coolToast(icon: Int, text: String, lifeTime: Long = 3000) {
+
         var toastView = layoutInflater.inflate(R.layout.duck_toast, null)
         var toastTextId = toastView.findViewById<TextView>(R.id._toast_text)
         var toastPicId = toastView.findViewById<ImageView>(R.id._toast_pic)
-        toastView.animation = AnimationUtils.loadAnimation(applicationContext, R.anim.rotate_like_rotor)
+
+        toastView.animation = AnimationUtils.loadAnimation(applicationContext, R.anim.toast_appearing)
+
+        try {
+            toastContainer.addView(toastView)
+        } catch (e: Exception) {
+            toastContainer.removeView(toastView)
+            toastContainer.addView(toastView)
+        }
+
         toastPicId.setImageResource(icon)
+        try {
+            val animatable = toastPicId.drawable as Animatable
+            animatable.start()
+        } catch (e: Exception) {
+
+        }
         toastTextId.text = text
-        toast.view = toastView
-        toast.show()
+
+        val lifeTimeToast = lifecycleScope.launch {
+            delay(lifeTime)
+            toastView.animate().alpha(0f).setDuration(220).start()
+        }
+
+        val removeToast = lifecycleScope.launch {
+            while (true) {
+                if(toastView.alpha == 0f) {
+                    toastContainer.removeView(toastView)
+                }
+                delay(1)
+            }
+        }
     }
     //
 
