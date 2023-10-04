@@ -13,7 +13,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Point
 import android.graphics.PorterDuff
-import android.graphics.Rect
+import android.graphics.drawable.Animatable
 import android.media.MediaScannerConnection
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -35,6 +35,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
     lateinit var centeredBlock: RelativeLayout
 
-    lateinit var picContainer: LinearLayout
+    lateinit var picContainer: FrameLayout
     lateinit var picGalleryScrollBar: HorizontalScrollView
     lateinit var picGalleryScrollLayout: LinearLayout
     lateinit var picGalleryScrollContainer: LinearLayout
@@ -94,13 +95,13 @@ class MainActivity : ComponentActivity() {
     lateinit var chapterScrollBar: HorizontalScrollView
     lateinit var chapterScrollContainer: LinearLayout
     lateinit var chapterScrollBlock: LinearLayout
-    lateinit var chapterUInumTome: TextView
+    lateinit var chapterUIsvg: ImageView
 
     lateinit var chapterUIscrollBar: ScrollView
     lateinit var chapterUIscrollContainer: LinearLayout
     lateinit var chapterUIscrollBlock: LinearLayout
 
-    lateinit var ranobeNameContainer: LinearLayout
+    lateinit var ranobeNameScrollBar: HorizontalScrollView
     lateinit var ranobeName: TextView
     var ranobeTitle = ""
 
@@ -139,6 +140,11 @@ class MainActivity : ComponentActivity() {
     var chUIscrollPos = 0
     var selectedChH = 0
     // locals that moved to globals for some reasons
+    var chUImidSvg = listOf<Int>(
+        R.drawable._f302,R.drawable._602,R.drawable._614,R.drawable._f327,
+        R.drawable._615,R.drawable._f9cb,R.drawable._f37f,R.drawable._f369,
+        R.drawable._f30c,R.drawable._f303,R.drawable._f309,R.drawable._f306
+    )
     var c = 1
     var of = 0
     var oldScr = 0
@@ -200,7 +206,7 @@ class MainActivity : ComponentActivity() {
         header = findViewById(R.id._header)
         centeredBlock = findViewById(R.id._centered_block)
         ranobeName = findViewById(R.id._ranobeName)
-        ranobeNameContainer = findViewById(R.id._ranobeNameContainer)
+        ranobeNameScrollBar = findViewById(R.id._ranobeNameScrollBar)
         chapterShownUI = findViewById(R.id._chapterShownUI)
         picContainer = findViewById(R.id._picture_container)
         picGalleryScrollLayout = findViewById(R.id._picture_gallery_scroll_layout)
@@ -221,7 +227,7 @@ class MainActivity : ComponentActivity() {
         chapterScrollBlock = findViewById(R.id._chapterScrollBlock)
         chapterUIscrollBar = findViewById(R.id._chapterUIscrollBar)
         chapterUIscrollContainer = findViewById(R.id._chapterUIscrollContainer)
-        chapterUInumTome = findViewById(R.id._chapter_UI_num_tome)
+        chapterUIsvg = findViewById(R.id._chapter_UI_svg)
         chapterUIscrollBlock = findViewById(R.id._chapterUIscrollBlock)
         openChUIbtn = findViewById(R.id._toCurrentChapter)
         duckCustomizerBtn = findViewById(R.id._duckCustomizerBtn)
@@ -231,6 +237,10 @@ class MainActivity : ComponentActivity() {
         toBmBtn = findViewById(R.id._toBookmark)
         swapThemeBtn = findViewById(R.id._swapTheme)
         //
+
+        ranobeNameScrollBar.setOnTouchListener { v, event ->
+            true
+        }
 
         CreateNotificationChannel()
 
@@ -266,7 +276,7 @@ class MainActivity : ComponentActivity() {
             if (!isChUIshown) {
                 openChUIbtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.rotate_from_180_fa))
                 delRanobeBtn.visibility = View.GONE
-                chapterUInumTome.visibility = View.GONE
+                chapterUIsvg.visibility = View.GONE
                 duckCustomizerBtn.visibility = View.VISIBLE
 
                 chapterScrollBar.visibility = View.VISIBLE
@@ -284,7 +294,7 @@ class MainActivity : ComponentActivity() {
                 delRanobeBtn.visibility = View.VISIBLE
                 duckCustomizerBtn.visibility = View.GONE
                 chapterScrollBar.visibility = View.GONE
-                chapterUInumTome.visibility = View.VISIBLE
+                chapterUIsvg.visibility = View.VISIBLE
 
 
                 scrollContainer.animate().alpha(0.4f).setDuration(250)
@@ -461,6 +471,18 @@ class MainActivity : ComponentActivity() {
             // generates block with chapters selection
             ChaptersSelectBlock(lifecycleScope)
             //
+
+            val titleAnim = lifecycleScope.launch {
+                while(true) {
+                    val time: Long = 25000
+                    while(true) {
+                        ranobeName.translationX = resources.displayMetrics.widthPixels.toFloat()
+                        ranobeName.animate().translationX(-resources.displayMetrics.widthPixels-getViewWidth(ranobeName).toFloat()).setDuration(time).setInterpolator(LinearInterpolator()).start()
+                        delay(time)
+                    }
+                }
+            }
+
         } catch (e: Exception) {
 
             // make everything null
@@ -476,6 +498,17 @@ class MainActivity : ComponentActivity() {
             ReadingBlock(lifecycleScope)
             ChaptersSelectBlock(lifecycleScope)
             //
+
+            val titleAnim = lifecycleScope.launch {
+                while(true) {
+                    val time: Long = 25000
+                    while(true) {
+                        ranobeName.translationX = resources.displayMetrics.widthPixels.toFloat()
+                        ranobeName.animate().translationX(-resources.displayMetrics.widthPixels-getViewWidth(ranobeName).toFloat()).setDuration(time).setInterpolator(LinearInterpolator()).start()
+                        delay(time)
+                    }
+                }
+            }
         }
     }
     //
@@ -496,7 +529,6 @@ class MainActivity : ComponentActivity() {
 
         // novel name
         ranobeName.text = ranobeTitle
-        ranobeNameContainer.gravity = Gravity.CENTER
         //
 
         paragraphCount = chText.lastIndex
@@ -595,21 +627,50 @@ class MainActivity : ComponentActivity() {
                     val roBitmap = ImageHelper.getRoundedCornerBitmap(bitmap, dpToFloat(30)
                         .toInt())
 
-                    img.setImageBitmap(roBitmap)
+                    var bmW = roBitmap.width
+                    var bmH = roBitmap.height
+
+                    while(bmW > dpToFloat(230).toInt()) {
+                        bmW = (bmW/1.1).toInt()
+                        bmH = (bmH/1.1).toInt()
+                    }
+                    while(bmW < dpToFloat(230).toInt()) {
+                        bmW = (bmW*1.1).toInt()
+                        bmH = (bmH*1.1).toInt()
+                    }
+
+                    img.setImageBitmap(Bitmap.createScaledBitmap(roBitmap, bmW, bmH, false))
 
                     img.layoutParams = LinearLayout.LayoutParams(
-                        dpToFloat(400).toInt(),
-                        dpToFloat(400).toInt()
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
                     )
                     img.setPadding(
-                        dpToFloat(30).toInt(),
+                        dpToFloat(0).toInt(),
                         dpToFloat(5).toInt(),
-                        dpToFloat(30).toInt(),
+                        dpToFloat(0).toInt(),
                         dpToFloat(30).toInt())
                     img.foregroundGravity = Gravity.CENTER
                     img.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.simple_appearing))
 
                     picContainer.addView(img)
+
+                    val dot = ImageView(applicationContext)
+                    dot.setImageResource(R.drawable.open_gallery)
+                    val animatable = dot.drawable as Animatable
+                    animatable.start()
+
+                    dot.layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    dot.setPadding(
+                        0,
+                        getViewHeight(img) - dpToFloat(30).toInt() - getViewHeight(dot)/2,
+                        0,
+                        0
+                    )
+                    dot.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.simple_appearing))
 
                     img.setOnClickListener {
 
@@ -640,8 +701,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     // returns process if pics in chapter's folder more than 1
-                    if(chPicFolder.listFiles().size > 1)
+                    if(chPicFolder.listFiles().size > 1) {
+                        picContainer.addView(dot)
                         return@launch
+                    }
                     //
                 }
                 //
@@ -848,8 +911,6 @@ class MainActivity : ComponentActivity() {
 
                 val offset = (scrollBar.bottom.toFloat() - getViewHeight(customScrollBarWhite)) * lerp
 
-                Log.i("scroll#prefs","top: ${lerp}")
-
                 customScrollBarRed.translationY = offset * 0.995f
                 customScrollBarYellow.translationY = offset * 0.997f
                 customScrollBarBlue.translationY = offset * 1.006f
@@ -996,6 +1057,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        var text = ""
         chUIjob = scope.launch {
 
             var height = mutableListOf<Int>()
@@ -1109,25 +1171,25 @@ class MainActivity : ComponentActivity() {
                     ReadingBlock(lifecycleScope)
                 }
             }
+            var switch = 0
             while (true) {
 
                 val curScr = chapterUIscrollBar.scrollY
                 val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
                 fun tomeAnim() {
-                    chapterUInumTome.alpha = 0f
-                    chapterUInumTome.scaleX = 0.8f
-                    chapterUInumTome.scaleY = 0.8f
-                    chapterUInumTome.animate().alpha(1f).setDuration(150).start()
-                    chapterUInumTome.animate().scaleX(1f).setDuration(150).start()
-                    chapterUInumTome.animate().scaleY(1f).setDuration(150).start()
+                    chapterUIsvg.alpha = 0f
+                    chapterUIsvg.scaleX = 0.4f
+                    chapterUIsvg.scaleY = 0.4f
+                    chapterUIsvg.animate().alpha(1f).setDuration(150).start()
+                    chapterUIsvg.animate().scaleX(0.6f).setDuration(150).start()
+                    chapterUIsvg.animate().scaleY(0.6f).setDuration(150).start()
                 }
 
                 if (curScr < oldScr && of == 0) {
                     oldScr = height[of]
-                    chapterUInumTome.text = ">.>"
-
                     if(oldOf != of) {
+                        chapterUIsvg.setImageResource(chUImidSvg.random())
                         vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
                         oldOf = of
                     }
@@ -1135,9 +1197,8 @@ class MainActivity : ComponentActivity() {
                 else if (curScr < oldScr && of != 0) {
                     oldScr = height[of]
                     of-=1
-                    chapterUInumTome.text = "Том: $of"
-
                     if(oldOf != of) {
+                        chapterUIsvg.setImageResource(chUImidSvg.random())
                         vibrator.vibrate(VibrationEffect.createOneShot(5, VibrationEffect.DEFAULT_AMPLITUDE))
                         tomeAnim()
                         oldOf = of
@@ -1146,9 +1207,8 @@ class MainActivity : ComponentActivity() {
                 else if(curScr >= height[of] && of != height.lastIndex) {
                     oldScr = height[of]
                     of+=1
-                    chapterUInumTome.text = "Том: $of"
-
                     if(oldOf != of) {
+                        chapterUIsvg.setImageResource(chUImidSvg.random())
                         vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
                         tomeAnim()
                         oldOf = of
@@ -1156,9 +1216,8 @@ class MainActivity : ComponentActivity() {
                 }
                 else if (curScr >= height[of] && of == height.lastIndex) {
                     oldScr = height[of]
-                    chapterUInumTome.text = "Том: ${of+1}"
-
                     if(oldOf != of+1) {
+                        chapterUIsvg.setImageResource(chUImidSvg.random())
                         vibrator.vibrate(VibrationEffect.createOneShot(10, VibrationEffect.DEFAULT_AMPLITUDE))
                         tomeAnim()
                         oldOf = of+1
@@ -1174,7 +1233,7 @@ class MainActivity : ComponentActivity() {
         openChUIbtn.startAnimation(AnimationUtils.loadAnimation(applicationContext, R.anim.rotate_from_180_fa))
         delRanobeBtn.visibility = View.GONE
         duckCustomizerBtn.visibility = View.VISIBLE
-        chapterUInumTome.visibility = View.GONE
+        chapterUIsvg.visibility = View.GONE
 
         chapterScrollBar.visibility = View.VISIBLE
 
@@ -1321,7 +1380,6 @@ class MainActivity : ComponentActivity() {
                 gitLinkBtn.animate().scaleY(1f).setDuration(250)
                     .setInterpolator(DecelerateInterpolator()).start()
             }
-
         }
         //
 
@@ -1329,9 +1387,6 @@ class MainActivity : ComponentActivity() {
         urlSearch.setOnKeyListener(object : View.OnKeyListener {
             @SuppressLint("RestrictedApi")
             override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
-
-
-
                 when (keyCode) {
                     KeyEvent.KEYCODE_ENTER -> {
                         if(!isDownloading) {

@@ -14,13 +14,13 @@
         android:orientation="vertical"
         android:gravity="top">
         <LinearLayout
-            android:id="@+id/_ranobeNameContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="horizontal"
-            android:gravity="center">
+            android:gravity="left">
             <HorizontalScrollView
-                android:layout_width="wrap_content"
+                android:id="@+id/_ranobeNameScrollBar"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scrollbarSize="0dp">
                 <TextView
@@ -34,8 +34,6 @@
                     android:textSize="14sp"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp"
-                    android:paddingLeft="15dp"
-                    android:paddingRight="15dp"
                     />
             </HorizontalScrollView>
         </LinearLayout>
@@ -153,13 +151,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:orientation="vertical">
-                    <LinearLayout
+                    <FrameLayout
                         android:id="@+id/_picture_container"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:orientation="horizontal"
-                        android:gravity="center">
-                    </LinearLayout>
+                        android:orientation="horizontal">
+                    </FrameLayout>
                     <LinearLayout
                         android:id="@+id/_scrollContainer"
                         android:layout_width="match_parent"
@@ -316,16 +313,11 @@
                             android:orientation="horizontal">
                         </LinearLayout>
                     </HorizontalScrollView>
-                    <TextView
-                        android:id="@+id/_chapter_UI_num_tome"
+                    <ImageView
+                        android:id="@+id/_chapter_UI_svg"
                         android:layout_width="0dp"
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
-                        android:textAlignment="center"
-                        android:text=">.>"
-                        android:fontFamily="@font/roboto_slab_regular"
-                        android:textColor="@color/_sideColor"
-                        android:textSize="16dp"
                         android:visibility="gone"/>
 />
                     <ImageView

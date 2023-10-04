@@ -1,0 +1,70 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt" >
+  <aapt:attr name="android:drawable">
+    <vector
+        android:width="40dp"
+        android:height="40dp"
+        android:viewportWidth="40"
+        android:viewportHeight="40">
+      <path
+          android:pathData="M10,2L30,2A8,8 0,0 1,38 10L38,30A8,8 0,0 1,30 38L10,38A8,8 0,0 1,2 30L2,10A8,8 0,0 1,10 2z"
+          android:strokeWidth="4"
+          android:fillColor="@color/_duckBodyColor"
+          android:strokeColor="@color/_mainColor"/>
+      <path
+          android:name="box"
+          android:pathData="M14.5,21.25L25.5,21.25A2,2 0,0 1,27.5 23.25L27.5,31.75A2,2 0,0 1,25.5 33.75L14.5,33.75A2,2 0,0 1,12.5 31.75L12.5,23.25A2,2 0,0 1,14.5 21.25z"
+          android:fillColor="@color/_mainColor"/>
+      <path
+          android:name="left"
+          android:pathData="M18.75,21.25L13.75,21.25A1.25,1.25 0,0 1,12.5 20L12.5,20A1.25,1.25 0,0 1,13.75 18.75L18.75,18.75A1.25,1.25 0,0 1,20 20L20,20A1.25,1.25 0,0 1,18.75 21.25z"
+          android:fillColor="@color/_mainColor"/>
+      <path
+          android:name="right"
+          android:pathData="M26.25,21.25L21.25,21.25A1.25,1.25 0,0 1,20 20L20,20A1.25,1.25 0,0 1,21.25 18.75L26.25,18.75A1.25,1.25 0,0 1,27.5 20L27.5,20A1.25,1.25 0,0 1,26.25 21.25z"
+          android:fillColor="@color/_mainColor"/>
+    </vector>
+  </aapt:attr>
+  <target android:name="box" >
+    <aapt:attr name="android:animation">
+      <set>
+        <objectAnimator
+            android:interpolator="@android:anim/decelerate_interpolator"
+            android:startOffset="200"
+            android:duration="220"
+            android:propertyName="pathData"
+            android:valueFrom="M14.5,21.25L25.5,21.25A2,2 0,0 1,27.5 23.25L27.5,31.75A2,2 0,0 1,25.5 33.75L14.5,33.75A2,2 0,0 1,12.5 31.75L12.5,23.25A2,2 0,0 1,14.5 21.25z"
+            android:valueTo="M14.5,16.25L25.5,16.25A2,2 0,0 1,27.5 18.25L27.5,26.75A2,2 0,0 1,25.5 28.75L14.5,28.75A2,2 0,0 1,12.5 26.75L12.5,18.25A2,2 0,0 1,14.5 16.25z"
+            android:valueType="pathType"/>
+      </set>
+    </aapt:attr>
+  </target>
+  <target android:name="left" >
+    <aapt:attr name="android:animation">
+      <set>
+        <objectAnimator
+            android:interpolator="@android:anim/decelerate_interpolator"
+            android:startOffset="200"
+            android:duration="220"
+            android:propertyName="pathData"
+            android:valueFrom="M18.75,21.25L13.75,21.25A1.25,1.25 0,0 1,12.5 20L12.5,20A1.25,1.25 0,0 1,13.75 18.75L18.75,18.75A1.25,1.25 0,0 1,20 20L20,20A1.25,1.25 0,0 1,18.75 21.25z"
+            android:valueTo="M9.833,13.125L14.163,15.625A1.25,1.25 61.224,0 1,14.62 17.333L14.62,17.333A1.25,1.25 61.224,0 1,12.913 17.79L8.583,15.29A1.25,1.25 99.633,0 1,8.125 13.583L8.125,13.583A1.25,1.25 99.633,0 1,9.833 13.125z"
+            android:valueType="pathType"/>
+      </set>
+    </aapt:attr>
+  </target>
+  <target android:name="right" >
+    <aapt:attr name="android:animation">
+      <set>
+        <objectAnimator
+            android:interpolator="@android:anim/decelerate_interpolator"
+            android:startOffset="200"
+            android:duration="220"
+            android:propertyName="pathData"
+            android:valueFrom="M26.25,21.25L21.25,21.25A1.25,1.25 0,0 1,20 20L20,20A1.25,1.25 0,0 1,21.25 18.75L26.25,18.75A1.25,1.25 0,0 1,27.5 20L27.5,20A1.25,1.25 0,0 1,26.25 21.25z"
+            android:valueTo="M26.083,15.625L30.413,13.125A1.25,1.25 90.858,0 1,32.12 13.583L32.12,13.583A1.25,1.25 90.858,0 1,31.663 15.29L27.333,17.79A1.25,1.25 79.076,0 1,25.625 17.333L25.625,17.333A1.25,1.25 79.076,0 1,26.083 15.625z"
+            android:valueType="pathType"/>
+      </set>
+    </aapt:attr>
+  </target>
+</animated-vector>
