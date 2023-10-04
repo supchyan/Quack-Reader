@@ -36,6 +36,6 @@
 <div align="center">
   <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/e6111973-e9b0-4b53-a3fd-ca7bd86cb4e3" alt="cover" />
   <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/05d0f02a-c3f4-4911-a000-29add3406360" alt="cover" />
-  <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/b94ab20e-b4b0-4679-82eb-a7249dbfaabc" alt="cover" />
+  <img width="30%" hspace="12" src="https://github.com/supchyan/QuackReader/assets/123704468/7df35998-fc20-48a7-8d34-7c978a668df7" alt="cover" />
 </div>
 
